@@ -16,9 +16,7 @@ class RolesController extends Controller
     public function showrole()
     {
         $roles = Roles::with('users')->get();
-        
         $dynmenu = DynamicMenu::all();
-        
         return view('dashboard.role.roles', [
             'roles' => $roles,
             'dynmenu' => $dynmenu
@@ -31,9 +29,8 @@ class RolesController extends Controller
      */
 
     public function addrole(){
-
-    $modules = DynamicMenu::all();
-    // $actions = Action::all();
+    
+    $permisson_key = DynamicMenu::all();
     $actions = [
         'read' => 'Lihat',
         'create' => 'Tambah',
@@ -41,7 +38,7 @@ class RolesController extends Controller
         'delete' => 'Hapus'
     ];
     return view('dashboard.role.create', [
-        'modules' => $modules,
+        'permisson_key' => $permisson_key,
         'actions' => $actions
     ]);
     }
@@ -52,9 +49,7 @@ class RolesController extends Controller
             'role' => 'required|unique:roles',
             'permissions' => 'array',
         ]);
-
         $permissions = [];
-
         if ($request->has('permissions')) {
             foreach ($request->permissions as $module => $actions) {
                 if (!empty($actions)) {
@@ -65,11 +60,8 @@ class RolesController extends Controller
 
         // Jika semua modul memiliki semua action, tandai sebagai Full Access
         $allModules = DynamicMenu::pluck('permission_key')->toArray();
-        
         $allActions = ['read', 'create', 'edit', 'delete'];
-
         $fullAccess = true;
-
         foreach ($allModules as $module) {
             if (!isset($permissions[$module]) || array_diff($allActions, $permissions[$module])) {
                 $fullAccess = false;
@@ -81,7 +73,6 @@ class RolesController extends Controller
             // Tandai full access dengan true
             $permissions = true;
         }
-
         Roles::create([
             'role' => $request->role,
             'akses' => json_encode($permissions),
@@ -194,7 +185,7 @@ class RolesController extends Controller
 
         // Cegah hapus SuperAdmin
         if (strtolower($role->role) === 'superadmin') {
-            return redirect()->route('show.role')->with('error', 'Role Super Admin tidak dapat dihapus!');
+        return redirect()->route('show.role')->with('error', 'Role Super Admin tidak dapat dihapus!');
         }
 
         $role->delete();

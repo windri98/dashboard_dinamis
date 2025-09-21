@@ -31,14 +31,16 @@ class Permission extends Model
         return $this->belongsToMany(Roles::class, 'role_permission');
     }
 
-    public function dynamicMenu()
+    // Relasi ke DynamicMenu dan DynamicMenuItem
+        public function menu()
     {
-        return $this->belongsTo(DynamicMenu::class, 'Permission_key_id');
+        return $this->belongsTo(DynamicMenu::class, 'menu_id');
     }
 
-    public function DynamicMenus()
+    public function menuItem()
     {
-        return $this->belongsTo(DynamicMenuItem::class, 'Permission_key_id');
+        return $this->belongsTo(DynamicMenuItem::class, 'menu_item_id');
     }
+
     
 }

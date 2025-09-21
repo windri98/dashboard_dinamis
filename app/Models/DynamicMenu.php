@@ -68,9 +68,9 @@ class DynamicMenu extends Model
         return $this->category === 'main' ? 'Menu Utama' : 'Pengaturan';
     }
 
-
-    public function DynamicMenus()
+        public function permissions()
     {
-        return $this->hasMany(Permission::class, 'Permission_key_id');
+        return $this->hasMany(Permission::class, 'menu_id');
     }
+
 }

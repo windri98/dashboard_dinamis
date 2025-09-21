@@ -34,10 +34,14 @@ class Roles extends Model
     }
 
 
+    
     public function role()
     {
         return $this->hasMany(User::class , 'role_id');
     }
+
+
+
 
     // Relasi ke Permission (many-to-many)
     public function permissions()

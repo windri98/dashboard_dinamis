@@ -105,102 +105,101 @@
         </form>
     </div> --}}
 
-<div class="container-create">
-    <form action="{{ route('create.role') }}" method="POST" class="form-container">
-        @csrf
+    <div class="container-create">
+        <form action="{{ route('create.role') }}" method="POST" class="form-container">
+            @csrf
 
-        {{-- Input Role --}}
-        <div class="form-group">
-            <label for="role" class="form-label">Nama Role:</label>
-            <input type="text" name="role" id="role"
-                   class="form-control"
-                   placeholder="Masukkan nama role"
-                   value="{{ old('role') }}"
-                   required>
-        </div>
+            {{-- Input Role --}}
+            <div class="form-group">
+                <label for="role" class="form-label">Nama Role:</label>
+                <input type="text" name="role" id="role"
+                    class="form-control"
+                    placeholder="Masukkan nama role"
+                    value="{{ old('role') }}"
+                    required>
+            </div>
 
-        {{-- Permissions --}}
-        <div class="form-group">
-            <label class="form-label">Hak Akses:</label>
+            {{-- Permissions --}}
+            <div class="form-group">
+                <label class="form-label">Hak Akses:</label>
 
-            <div class="permission-card">
-                <div class="table-responsive">
-                    <table class="roles-table permission-table">
-                        <thead>
-                            <tr>
-                                <th>Modul</th>
-                                @foreach($actions as $actionKey => $actionName)
-                                    <th class="text-center">{{ $actionName }}</th>
-                                @endforeach
-                                <th class="text-center">Semua</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($modules as $module)
+                <div class="permission-card">
+                    <div class="table-responsive">
+                        <table class="roles-table permission-table">
+                            <thead>
                                 <tr>
-                                    <td>{{ $module->nama }}</td>
+                                    <th>Modul</th>
+                                    @foreach($actions as $actionKey => $actionName)
+                                        <th class="text-center">{{ $actionName }}</th>
+                                    @endforeach
+                                    <th class="text-center">Semua</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($permisson_key as $module)
+                                    <tr>
+                                        <td>{{ $module->permission_key }}</td>
+                                        @foreach($actions as $actionKey => $actionName)
+                                            <td class="text-center">
+                                                <div class="checkbox-wrapper">
+                                                    <input class="custom-checkbox module-action"
+                                                        type="checkbox"
+                                                        id="{{ $module->slug }}_{{ $actionKey }}"
+                                                        name="permissions[{{ $module->slug }}][]"
+                                                        value="{{ $actionKey }}"
+                                                        data-module="{{ $module->slug }}">
+                                                    <label for="{{ $module->slug }}_{{ $actionKey }}"></label>
+                                                </div>
+                                            </td>
+                                        @endforeach
+                                        <td class="text-center">
+                                            <div class="checkbox-wrapper">
+                                                <input class="custom-checkbox select-all"
+                                                    type="checkbox"
+                                                    id="select_all_{{ $module->slug }}"
+                                                    data-module="{{ $module->slug }}">
+                                                <label for="select_all_{{ $module->slug }}"></label>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td><strong>Pilih Semua</strong></td>
                                     @foreach($actions as $actionKey => $actionName)
                                         <td class="text-center">
                                             <div class="checkbox-wrapper">
-                                                <input class="custom-checkbox module-action"
+                                                <input class="custom-checkbox select-all-action"
                                                     type="checkbox"
-                                                    id="{{ $module->slug }}_{{ $actionKey }}"
-                                                    name="permissions[{{ $module->slug }}][]"
-                                                    value="{{ $actionKey }}"
-                                                    data-module="{{ $module->slug }}">
-                                                <label for="{{ $module->slug }}_{{ $actionKey }}"></label>
+                                                    id="select_all_{{ $actionKey }}"
+                                                    data-action="{{ $actionKey }}">
+                                                <label for="select_all_{{ $actionKey }}"></label>
                                             </div>
                                         </td>
                                     @endforeach
                                     <td class="text-center">
                                         <div class="checkbox-wrapper">
-                                            <input class="custom-checkbox select-all"
+                                            <input class="custom-checkbox"
                                                 type="checkbox"
-                                                id="select_all_{{ $module->slug }}"
-                                                data-module="{{ $module->slug }}">
-                                            <label for="select_all_{{ $module->slug }}"></label>
+                                                id="select_all_permissions">
+                                            <label for="select_all_permissions"></label>
                                         </div>
                                     </td>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td><strong>Pilih Semua</strong></td>
-                                @foreach($actions as $actionKey => $actionName)
-                                    <td class="text-center">
-                                        <div class="checkbox-wrapper">
-                                            <input class="custom-checkbox select-all-action"
-                                                type="checkbox"
-                                                id="select_all_{{ $actionKey }}"
-                                                data-action="{{ $actionKey }}">
-                                            <label for="select_all_{{ $actionKey }}"></label>
-                                        </div>
-                                    </td>
-                                @endforeach
-                                <td class="text-center">
-                                    <div class="checkbox-wrapper">
-                                        <input class="custom-checkbox"
-                                            type="checkbox"
-                                            id="select_all_permissions">
-                                        <label for="select_all_permissions"></label>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        {{-- Submit --}}
-        <div class="button-group">
-            <button type="submit" class="primary-button">Simpan</button>
-        </div>
-    </form>
-</div>
-
-
+            {{-- Submit --}}
+            <div class="button-group">
+                <button type="submit" class="primary-button">Simpan</button>
+            </div>
+        </form>
+    </div>
+    
 </section>
 
 
