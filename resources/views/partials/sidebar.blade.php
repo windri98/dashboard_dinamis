@@ -123,12 +123,14 @@
 
         <!-- Pengaturan Section -->
         <div class="menu-title">Pengaturan</div>
+        
         <div class="menu-item dropdown">
             <div class="dropdown-header">
                 <i class="fa fa-cogs" aria-hidden="true"></i>
                 <span class="menu-text">Setting</span>
                 <i class="fas fa-chevron-down dropdown-icon"></i>
             </div>
+
             <div class="dropdown-content">
                 <div class="sub-menu-item">
                     <a href="{{ route('settings.dynamic-menus.index') }}">
@@ -185,11 +187,13 @@
         @endforeach
 
         <div class="menu-item dropdown">
+
             <div class="dropdown-header">
                 <i class="fa-solid fa-shield"></i>
                 <span class="menu-text">Privilege</span>
                 <i class="fas fa-chevron-down dropdown-icon"></i>
             </div>
+
             <div class="dropdown-content">
                 <div class="sub-menu-item">
                     <a href="/showrole">
@@ -197,20 +201,21 @@
                         <span class="menu-text">Role</span>
                     </a>
                 </div>
+
                 <div class="sub-menu-item">
                     <a href="/showuser">
                         <i class="fa fa-users" aria-hidden="true"></i>
                         <span class="menu-text">User</span>
                     </a>
                 </div>
-                <div class="sub-menu-item">
+                {{-- <div class="sub-menu-item">
                     <a href="#" style="display: flex; align-items: center; gap: 8px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
                             <path fill="currentColor" fill-rule="evenodd" d="M23.255 5.87v-.816l-.746-.328l-10-4.4l-.504-.222l-.503.222l-10 4.4l-.747.328v13.88l.746.33l10 4.41l.504.222l.504-.223l10-4.41l.746-.328zm-10 4.956l7.5-3.307v9.786l-7.5 3.307zm-2.5 0l-7.5-3.307v9.786l7.5 3.307z" clip-rule="evenodd"/>
                         </svg>
                         <span class="menu-text" style="margin-left: 10px">Module</span>
                     </a>
-                </div>
+                </div> --}}
             </div>
         </div>
         <!-- Static Bottom Menus -->
