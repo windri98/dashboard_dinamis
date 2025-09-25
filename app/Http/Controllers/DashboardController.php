@@ -5,12 +5,16 @@ use App\Models\DynamicMenu;
 use App\Models\DynamicTable;
 use App\Models\User;
 use App\Models\Roles;
+use App\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    private function getUserPermissions()
+    /**
+     * Get user permissions as array of permission IDs (consistent with RolesController)
+     */
+        private function getUserPermissions()
     {
         $userRoleId = auth()->user()->role_id;
         $isSuperAdmin = $userRoleId == 1;
@@ -18,31 +22,60 @@ class DashboardController extends Controller
         $permissions = [];
         if (!$isSuperAdmin) {
             $userRole = Roles::find($userRoleId);
-            if ($userRole && $userRole->akses) {
-                $permissions = is_string($userRole->akses) 
-                    ? json_decode($userRole->akses, true) 
-                    : $userRole->akses;
-                $permissions = $permissions ?: [];
+            if ($userRole && !empty($userRole->akses)) {
+                // Karena ada casting 'akses' => 'array' di model, ini sudah pasti array
+                $permissions = is_array($userRole->akses) ? $userRole->akses : [];
             }
         }
         
         return [$permissions, $isSuperAdmin];
     }
 
-    private function hasPermission($moduleKey, $action)
+    /**
+     * Check if user has permission berdasarkan menu dan action
+     */
+    private function hasPermission($menuKey, $actionKey)
     {
-        [$permissions, $isSuperAdmin] = $this->getUserPermissions();
+        [$permissionIds, $isSuperAdmin] = $this->getUserPermissions();
         
         if ($isSuperAdmin) return true;
         
-        return isset($permissions[$moduleKey]) && 
-            is_array($permissions[$moduleKey]) && 
-            in_array($action, $permissions[$moduleKey]);
+        // Cari permission berdasarkan menu permission_key dan action nama
+        $permission = Permission::whereHas('menu', function($q) use ($menuKey) {
+                $q->where('permission_key', $menuKey);
+            })
+            ->whereHas('action', function($q) use ($actionKey) {
+                $q->where('nama', $actionKey);
+            })
+            ->first();
+            
+        if (!$permission) {
+            return false;
+        }
+        
+        return in_array($permission->id, $permissionIds);
+    }
+
+    /**
+     * Check menu permission untuk filtering di dashboard
+     */
+    private function hasMenuPermission($menuPermissionKey)
+    {
+        [$permissionIds, $isSuperAdmin] = $this->getUserPermissions();
+        
+        if ($isSuperAdmin) return true;
+        
+        // Cari permission untuk menu dengan permission_key
+        $menuPermissions = Permission::whereHas('menu', function($q) use ($menuPermissionKey) {
+            $q->where('permission_key', $menuPermissionKey);
+        })->pluck('id')->toArray();
+        
+        // Check apakah user punya minimal 1 permission untuk menu ini
+        return !empty(array_intersect($menuPermissions, $permissionIds));
     }
 
     public function index()
     {
-        
         [$permissions, $isSuperAdmin] = $this->getUserPermissions();
         
         // Fetch active dynamic menus with permission filtering
@@ -50,8 +83,11 @@ class DashboardController extends Controller
             ->ordered()
             ->with('activeItems')
             ->get()
-            ->filter(function($menu) use ($permissions, $isSuperAdmin) {
-                return $menu->hasUserPermission($permissions, $isSuperAdmin);
+            ->filter(function($menu) use ($isSuperAdmin) {
+                if ($isSuperAdmin) return true;
+                
+                // Check menu permission
+                return $this->hasMenuPermission($menu->permission_key);
             });
 
         // Get dashboard statistics
@@ -70,20 +106,18 @@ class DashboardController extends Controller
         ]);
     }
 
-
-
     // ==========================================TABEL======================================
 
     public function showTable(Request $request, $tableId)
     {
-
-        if (!$this->hasPermission('dynamic_table', 'read')) {
+        // Check permission untuk read/view tabel
+        if (!$this->hasPermission('master_data', 'View/Lihat')) {
             abort(403, 'Anda tidak memiliki permission untuk mengakses tabel ini');
         }
 
         $dynamicTable = DynamicTable::with('activeColumns')->findOrFail($tableId);
-        // dd( $dynamicTable);
-         // Check if the actual database table exists
+        
+        // Check if the actual database table exists
         if (!$dynamicTable->tableExists()) {
             return redirect()->route('dashboard.index')
                 ->with('error', 'Tabel database tidak ditemukan');
@@ -153,10 +187,9 @@ class DashboardController extends Controller
         ]);
     }
 
-    // create method updateTableData di Controller
     public function storeTableData(Request $request, $tableId)
     {
-        if (!$this->hasPermission('dynamic_table', 'create')) {
+        if (!$this->hasPermission('master_data', 'Create/Tambah')) {
             return back()->with('error', 'Anda tidak memiliki permission untuk menambah data');
         }
 
@@ -186,68 +219,12 @@ class DashboardController extends Controller
         }
     }
 
-
-
-    // Update method updateTableData di Controller
-    // public function updateTableData(Request $request, $tableId, $id)
-    // {
-    //     if (!$this->hasPermission('dynamic_table', 'edit')) {
-    //         return back()->with('error', 'Anda tidak memiliki permission untuk mengedit data');
-    //     }
-
-    //     $dynamicTable = DynamicTable::with('activeColumns')->findOrFail($tableId);
-    //     try {
-    //         $rules = $this->buildValidationRules($dynamicTable);
-    //         $validated = $request->validate($rules);
-
-    //         // Prepare data dengan handling null values
-    //         $updateData = [];
-    //         foreach ($validated as $key => $value) {
-    //             // Jangan masukkan field yang kosong kecuali memang boleh null
-    //             $column = $dynamicTable->activeColumns->where('column_name', $key)->first();
-                
-    //             if ($column) {
-    //                 if (!$column->is_required && ($value === null || $value === '')) {
-    //                     $updateData[$key] = null;
-    //                 } else {
-    //                     $updateData[$key] = $value;
-    //                 }
-    //             } else {
-    //                 $updateData[$key] = $value;
-    //             }
-    //         }
-            
-    //         $updateData['updated_at'] = now();
-
-    //         $affected = DB::table($dynamicTable->table_name)
-    //             ->where('id', $id)
-    //             ->update($updateData);
-
-    //         if ($affected > 0) {
-    //             return back()->with('success', 'Data berhasil diperbarui');
-    //         } else {
-    //             return back()->with('warning', 'Tidak ada perubahan data yang disimpan');
-    //         }
-            
-    //     } catch (\Illuminate\Validation\ValidationException $e) {
-    //         \Log::error('Validation error: ' . json_encode($e->errors()));
-    //         return back()->withErrors($e->errors())->withInput();
-            
-    //     } catch (\Exception $e) {
-    //         \Log::error('Update table data error: ' . $e->getMessage());
-    //         \Log::error('Stack trace: ' . $e->getTraceAsString());
-            
-    //         return back()->with('error', 'Gagal memperbarui data: ' . $e->getMessage());
-    //     }
-    // }
-    
-    // / Method controller - sesuaikan parameter dengan route
     public function updateTableData(Request $request, $table, $id)
     {
         \Log::info("Update called - Table: {$table}, ID: {$id}");
         \Log::info("Request data: " . json_encode($request->all()));
         
-        if (!$this->hasPermission('dynamic_table', 'update')) {
+        if (!$this->hasPermission('master_data', 'Edit/Update')) {
             return back()->with('error', 'Anda tidak memiliki permission untuk mengedit data');
         }
 
@@ -270,7 +247,6 @@ class DashboardController extends Controller
             // Prepare data for update - improved version
             $updateData = [];
             foreach ($validated as $key => $value) {
-                // Allow empty string dan null untuk field non-required
                 $column = $dynamicTable->activeColumns->where('column_name', $key)->first();
                 
                 if ($column && !$column->is_required && ($value === null || $value === '')) {
@@ -301,10 +277,9 @@ class DashboardController extends Controller
         }
     }
     
-    // delete
     public function destroyTableData($tableId, $id)
     {
-        if (!$this->hasPermission('dynamic_table', 'delete')) {
+        if (!$this->hasPermission('master_data', 'Delete/Hapus')) {
             return back()->with('error', 'Anda tidak memiliki permission untuk menghapus data');
         }
 

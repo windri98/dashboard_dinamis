@@ -21,7 +21,11 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             
-            $table->index(['category', 'is_active', 'order']);
+            $table->index([
+                'category', 
+                'is_active', 
+                'order'
+            ]);
         });
     }
 

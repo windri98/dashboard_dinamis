@@ -13,45 +13,30 @@ class Roles extends Model
         'akses'
         
     ];
-
+    protected $casts = [
+        'akses' => 'array'  // Otomatis convert JSON ke array
+    ];
+    
+    public function hasPermission($permissionId)
+    {
+        $permissions = $this->akses ?? [];
+        return in_array($permissionId, $permissions);
+    }
+    // Model Role
     public function users()
     {
         return $this->hasMany(User::class , 'role_id');
     }
 
-    public function hasPermission($permission)
-    {
-        // Asumsikan akses disimpan sebagai JSON atau array serialized
-        $permissions = json_decode($this->akses, true);
-        
-        // Jika akses bukan array valid, kembalikan false
-        if (!is_array($permissions)) {
-            return false;
-        }
-        
-        // Periksa apakah permission tertentu ada dalam array akses
-        return in_array($permission, $permissions);
-    }
-
-
-    
+        // Model User
     public function role()
     {
         return $this->hasMany(User::class , 'role_id');
     }
 
-
-
-
-    // Relasi ke Permission (many-to-many)
-    public function permissions()
+    public function permission()
     {
-        return $this->belongsToMany(
-            Permission::class,      // model terkait
-            'role_permission',      // nama pivot table
-            'role_id',              // foreign key di pivot untuk Role
-            'permission_id'         // foreign key di pivot untuk Permission
-        );
+        return $this->belongsTo(Roles::class, 'role_id');
     }
 
 }

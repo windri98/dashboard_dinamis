@@ -17,6 +17,7 @@ class DynamicMenu extends Model
         'is_active'
     ];
 
+
     protected $casts = [
         'is_active' => 'boolean',
         'order' => 'integer',

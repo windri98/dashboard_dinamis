@@ -91,6 +91,7 @@ class DynamicMenuItem extends Model
             in_array('read', $userPermissions[$this->permission_key]);
     }
 
+    //reslasi many to many ke permission
         public function permissions()
     {
         return $this->hasMany(Permission::class, 'menu_item_id'); 

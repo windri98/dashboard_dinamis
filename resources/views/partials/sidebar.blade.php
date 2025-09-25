@@ -1,72 +1,70 @@
 @php
     // Redirect to forbidden page if not logged in
-    if (!auth()->check()) {
+if (!auth()->check()) {
         header('Location: /login');
         exit;
     }
 
-    // Get the current user's role_id
     $userRoleId = auth()->user()->role_id;
-
-    // Check if super admin
     $isSuperAdmin = $userRoleId == 1;
-
-    // Get user's role with access permissions
     $userRole = App\Models\Roles::find($userRoleId);
 
-    // Parse permissions from the role's akses field
-    $permissions = [];
-    if (!$isSuperAdmin && $userRole && $userRole->akses) {
-        $permissions = is_string($userRole->akses) ? json_decode($userRole->akses, true) : $userRole->akses;
-        $permissions = $permissions ?: [];
+    // FIXED: Handle casting array
+    $permissionIds = [];
+    if (!$isSuperAdmin && $userRole && !empty($userRole->akses)) {
+        $permissionIds = is_array($userRole->akses) ? $userRole->akses : [];
     }
 
-    // Fungsi untuk memeriksa apakah pengguna memiliki izin tertentu
-    function hasPermission($moduleKey, $actionKey, $permissions, $isSuperAdmin) {
+    // FIXED: Function to check permission based on database
+    function hasPermission($menuKey, $actionKey, $permissionIds, $isSuperAdmin) {
         if ($isSuperAdmin) return true;
         
-        // Jika module ada dalam permissions dan actionKey ada dalam array nilai module
-        if (isset($permissions[$moduleKey]) && 
-            is_array($permissions[$moduleKey]) && 
-            in_array($actionKey, $permissions[$moduleKey])) {
-            return true;
+        // Query permission berdasarkan menu permission_key dan action nama
+        $permission = App\Models\Permission::whereHas('menu', function($q) use ($menuKey) {
+                $q->where('permission_key', $menuKey);
+            })
+            ->whereHas('action', function($q) use ($actionKey) {
+                $q->where('nama', $actionKey);
+            })
+            ->first();
+            
+        if (!$permission) {
+            return false;
         }
         
-        return false;
+        return in_array($permission->id, $permissionIds);
     }
 
-    // Fungsi untuk memeriksa apakah pengguna memiliki salah satu izin (read, create, edit, delete)
-    function hasAnyPermission($moduleKey, $permissions, $isSuperAdmin) {
+    // FIXED: Function to check if user has any permission for a menu
+    function hasMenuAccess($menuPermissionKey, $permissionIds, $isSuperAdmin) {
         if ($isSuperAdmin) return true;
         
-        $actions = ['read', 'create', 'edit', 'delete'];
+        // Get all permission IDs for this menu
+        $menuPermissions = App\Models\Permission::whereHas('menu', function($q) use ($menuPermissionKey) {
+            $q->where('permission_key', $menuPermissionKey);
+        })->pluck('id')->toArray();
         
-        foreach ($actions as $action) {
-            if (hasPermission($moduleKey, $action, $permissions, $isSuperAdmin)) {
-                return true;
-            }
-        }
-        
-        return false;
+        // Check if user has at least one permission for this menu
+        return !empty(array_intersect($menuPermissions, $permissionIds));
     }
 
-    // PERBAIKAN: Hapus relasi dynamicTable yang bermasalah
+    // FIXED: Load dynamic menus with proper permission filtering
     $dynamicMainMenus = \App\Models\DynamicMenu::active()
         ->byCategory('main')
         ->ordered()
-        ->with('activeItems') // Hapus ->dynamicTable dulu
+        ->with('activeItems')
         ->get()
-        ->filter(function($menu) use ($permissions, $isSuperAdmin) {
-            return $menu->hasUserPermission($permissions, $isSuperAdmin);
+        ->filter(function($menu) use ($permissionIds, $isSuperAdmin) {
+            return hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin);
         });
 
     $dynamicSettingsMenus = \App\Models\DynamicMenu::active()
         ->byCategory('settings')
         ->ordered()
-        ->with('activeItems') // Hapus ->dynamicTable dulu
+        ->with('activeItems')
         ->get()
-        ->filter(function($menu) use ($permissions, $isSuperAdmin) {
-            return $menu->hasUserPermission($permissions, $isSuperAdmin);
+        ->filter(function($menu) use ($permissionIds, $isSuperAdmin) {
+            return hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin);
         });
 @endphp
 
@@ -96,7 +94,15 @@
                 </div>
                 <div class="dropdown-content">
                     @forelse($menu->activeItems as $item)
-                        @if($item->hasUserPermission($permissions, $isSuperAdmin))
+                        @php
+                            // Check individual menu item permission
+                            $hasItemAccess = $isSuperAdmin;
+                            if (!$hasItemAccess && $item->permission_key) {
+                                $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
+                            }
+                        @endphp
+                        
+                        @if($hasItemAccess)
                             <div class="sub-menu-item">
                                 <a href="{{ $item->url }}">
                                     <i class="{{ $item->icon }}"></i>
@@ -124,6 +130,8 @@
         <!-- Pengaturan Section -->
         <div class="menu-title">Pengaturan</div>
         
+        <!-- Static Settings Menu -->
+        @if($isSuperAdmin || hasPermission('settings', 'View/Lihat', $permissionIds, $isSuperAdmin))
         <div class="menu-item dropdown">
             <div class="dropdown-header">
                 <i class="fa fa-cogs" aria-hidden="true"></i>
@@ -132,29 +140,35 @@
             </div>
 
             <div class="dropdown-content">
+                @if($isSuperAdmin || hasPermission('dynamic_menu', 'View/Lihat', $permissionIds, $isSuperAdmin))
                 <div class="sub-menu-item">
                     <a href="{{ route('settings.dynamic-menus.index') }}">
                         <i class="fa fa-bars" aria-hidden="true"></i>
                         <span class="menu-text">Kelola Menu</span>
                     </a>
                 </div>
+                @endif
 
+                @if($isSuperAdmin || hasPermission('dynamic_table', 'View/Lihat', $permissionIds, $isSuperAdmin))
                 <div class="sub-menu-item">
                     <a href="{{ route('settings.dynamic-tables.index') }}">
                         <i class="fa fa-table" aria-hidden="true"></i>
                         <span class="menu-text">Kelola Tabel</span>
                     </a>
                 </div>
+                @endif
 
+                @if($isSuperAdmin || hasPermission('api_management', 'View/Lihat', $permissionIds, $isSuperAdmin))
                 <div class="sub-menu-item">
                     <a href="#" style="display: flex; align-items: center; gap: 8px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16.694 13.716a5.277 5.277 0 0 0 5.366-5.187a5.28 5.28 0 0 0-5.366-5.186c-.454 0-.906.055-1.347.165A4.93 4.93 0 0 0 10.882.75a4.855 4.855 0 0 0-4.9 4.342a4.38 4.38 0 0 0-4.043 4.3a4.4 4.4 0 0 0 4.471 4.322zm3.551 9.534v-6.534m-1.307 0h2.613m-2.613 6.534h2.613m-10.454 0v-2.614m.003 0h1.96a1.96 1.96 0 1 0 0-3.92H11.1zM1.949 23.25l.737-4.92a1.9 1.9 0 0 1 3.752 0l.738 4.92m-4.884-2.287h4.541"/></svg>
                         <span class="menu-text">Kelola API</span>
                     </a>
                 </div>
-
+                @endif
             </div>
         </div>
+        @endif
         
         <!-- Dynamic Settings Menus -->
         @foreach($dynamicSettingsMenus as $menu)
@@ -166,7 +180,14 @@
                 </div>
                 <div class="dropdown-content">
                     @forelse($menu->activeItems as $item)
-                        @if($item->hasUserPermission($permissions, $isSuperAdmin))
+                        @php
+                            $hasItemAccess = $isSuperAdmin;
+                            if (!$hasItemAccess && $item->permission_key) {
+                                $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
+                            }
+                        @endphp
+                        
+                        @if($hasItemAccess)
                             <div class="sub-menu-item">
                                 <a href="{{ $item->url }}">
                                     <i class="{{ $item->icon }}"></i>
@@ -186,8 +207,9 @@
             </div>
         @endforeach
 
+        <!-- Privilege Menu -->
+        @if($isSuperAdmin || hasPermission('privilege', 'View/Lihat', $permissionIds, $isSuperAdmin))
         <div class="menu-item dropdown">
-
             <div class="dropdown-header">
                 <i class="fa-solid fa-shield"></i>
                 <span class="menu-text">Privilege</span>
@@ -195,29 +217,27 @@
             </div>
 
             <div class="dropdown-content">
+                @if($isSuperAdmin || hasPermission('roles', 'View/Lihat', $permissionIds, $isSuperAdmin))
                 <div class="sub-menu-item">
                     <a href="/showrole">
                         <i class="fas fa-user-cog"></i>
                         <span class="menu-text">Role</span>
                     </a>
                 </div>
+                @endif
 
+                @if($isSuperAdmin || hasPermission('users', 'View/Lihat', $permissionIds, $isSuperAdmin))
                 <div class="sub-menu-item">
                     <a href="/showuser">
                         <i class="fa fa-users" aria-hidden="true"></i>
                         <span class="menu-text">User</span>
                     </a>
                 </div>
-                {{-- <div class="sub-menu-item">
-                    <a href="#" style="display: flex; align-items: center; gap: 8px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
-                            <path fill="currentColor" fill-rule="evenodd" d="M23.255 5.87v-.816l-.746-.328l-10-4.4l-.504-.222l-.503.222l-10 4.4l-.747.328v13.88l.746.33l10 4.41l.504.222l.504-.223l10-4.41l.746-.328zm-10 4.956l7.5-3.307v9.786l-7.5 3.307zm-2.5 0l-7.5-3.307v9.786l7.5 3.307z" clip-rule="evenodd"/>
-                        </svg>
-                        <span class="menu-text" style="margin-left: 10px">Module</span>
-                    </a>
-                </div> --}}
+                @endif
             </div>
         </div>
+        @endif
+
         <!-- Static Bottom Menus -->
         <div class="menu-item">
             <a href="#" style="text-decoration: none; color: inherit;">
@@ -225,15 +245,5 @@
                 <span class="menu-text">Bantuan</span>
             </a>
         </div>
-        {{-- <div class="menu-title">LAINNYA</div> --}}
-        {{-- <div class="menu-item">
-            <form method="POST" action="{{ route('logout') }}" style="margin: 0;">
-                @csrf
-                <button type="submit" style="background: none; border: none; color: inherit; padding: 12px 20px; width: 100%; text-align: left; cursor: pointer; display: flex; align-items: center; text-decoration: none;">
-                    <i class="fas fa-sign-out-alt" style="width: 20px; margin-right: 12px;"></i>
-                    <span class="menu-text">Keluar</span>
-                </button>
-            </form>
-        </div> --}}
     </nav>
 </aside>

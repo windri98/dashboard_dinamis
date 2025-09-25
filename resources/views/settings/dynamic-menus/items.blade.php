@@ -7,9 +7,6 @@
     </div>
     <div class="content-body" id="contentArea">
         <div class="btn" style="display: flex; justify-content: flex-end; gap: 10px;">
-            {{-- <button class="btn btn-primary" onclick="openCreateModal()">
-                <i class="fas fa-plus"></i> Tambah Menu Baru 
-            </button> --}}
             <button class="btn btn-primary" onclick="openSubmenuModal({{ $dynamicMenu->id }})">
                 <i class="fas fa-plus"></i> Tambah Sub Menu 
             </button>
@@ -38,7 +35,6 @@
                         <th>Nama Menu</th>
                         <th>Icon</th>
                         <th>Kategori</th>
-                        {{-- <th>Sub Menu</th> --}}
                         <th>Status</th>
                         <th>Aksi</th>
                     </tr>
@@ -56,13 +52,6 @@
                                 </span>
                             </td>
 
-                            {{-- <td>
-                                <span id="submenu-count-{{ $item->id }}">{{ $item->children_count ?? '0' }} sub menu</span>
-                                <button class="btn btn-sm btn-success" onclick="openSubmenuModal({{ $item->id }})" style="margin-left: 10px;">
-                                    <i class="fas fa-plus"></i> Tambah Sub
-                                </button>
-                            </td> --}}
-                            
                             <td>
                                 <span class="badge badge-{{ $item->is_active ? 'success' : 'danger' }}">
                                     {{ $item->is_active ? 'Aktif' : 'Nonaktif' }}
@@ -82,33 +71,6 @@
                                 </form>
                             </td>
                         </tr>
-                        {{-- Baris untuk menampilkan submenu langsung di bawah parent --}}
-                        {{-- @if($item->children && $item->children->count() > 0)
-                            <tr class="submenu-header">
-                                <td colspan="6" style="background-color: #f8f9fa; padding: 10px; font-weight: bold;">
-                                    <i class="fas fa-list"></i> Sub Menus untuk {{ $item->name }}:
-                                </td>
-                            </tr>
-                            @foreach($item->children as $submenu)
-                                <tr class="submenu-row" style="background-color: #f8f9fa;">
-                                    <td style="padding-left: 30px;">
-                                        <i class="{{ $submenu->icon }}"></i> {{ $submenu->name }}
-                                    </td>
-                                    <td>{{ $submenu->link_type === 'table' ? 'Tabel: ' . $submenu->link_value : $submenu->link_type . ': ' . $submenu->link_value }}</td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                    <td><span class="badge badge-{{ $submenu->is_active ? 'success' : 'danger' }}">{{ $submenu->is_active ? 'Aktif' : 'Nonaktif' }}</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary" onclick='openEditSubmenuModal(@json($submenu))'>
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-danger" onclick="deleteSubmenu({{ $submenu->id }})">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        @endif --}}
                     @endforeach
                 </tbody>
             </table>
@@ -199,8 +161,8 @@
                             <div class="form-group">
                                 <label for="submenuPermissionKey" class="form-label">Permission Key</label>
                                 <input type="text" class="form-control" id="submenuPermissionKey" name="permission_key" 
-                                    placeholder="users, products, reports">
-                                <small class="text-muted">Kosongkan jika semua user bisa akses</small>
+                                    placeholder="ex: kelola_pengguna" maxlength="50">
+                                <small class="text-muted">Kosongkan jika semua user bisa akses. Otomatis terisi dari nama jika kosong.</small>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -332,57 +294,6 @@
     </div>
 
 <script>
-    // ===== FUNGSI UNTUK MENU UTAMA =====
-    
-    /**
-     * Buka modal untuk menambah menu baru
-     */
-    // function openCreateModal() {
-    //     document.getElementById('tableModalTitle').innerText = 'Tambah Menu Baru';
-    //     document.getElementById('tableForm').action = "{{ route('settings.dynamic-menu-items.store') }}";
-    //     document.getElementById('methodField').innerHTML = ''; // reset method
-    //     document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save"></i> Simpan Menu';
-
-    //     // Reset semua field
-    //     document.getElementById('menuId').value = '';
-    //     document.getElementById('menuName').value = '';
-    //     document.getElementById('menuIcon').value = 'fas fa-link';
-    //     document.getElementById('linkType').value = 'table';
-    //     document.getElementById('linkValue').value = '';
-    //     document.getElementById('permissionKey').value = '';
-    //     document.getElementById('menuOrder').value = 0;
-
-    //     // Hide checkbox untuk create mode
-    //     document.getElementById('menuActiveGroup').style.display = 'none';
-
-    //     document.getElementById('tableModal').style.display = 'block';
-    // }
-
-    // /**
-    //  * Buka modal untuk edit menu
-    //  */
-    // function openEditModal(menu) {
-    //     document.getElementById('tableModalTitle').innerText = 'Edit Menu';
-    //     document.getElementById('tableForm').action = "/settings/dynamic-menu-items/" + menu.id;
-    //     document.getElementById('methodField').innerHTML = '@method("PUT")';
-    //     document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save"></i> Update Menu';
-
-    //     // Isi field dengan data menu
-    //     document.getElementById('menuId').value = menu.id;
-    //     document.getElementById('menuName').value = menu.name;
-    //     document.getElementById('menuIcon').value = menu.icon;
-    //     document.getElementById('linkType').value = menu.link_type;
-    //     document.getElementById('linkValue').value = menu.link_value;
-    //     document.getElementById('permissionKey').value = menu.permission_key ?? '';
-    //     document.getElementById('menuOrder').value = menu.order;
-
-    //     // Show checkbox untuk edit mode
-    //     document.getElementById('menuActiveGroup').style.display = 'block';
-    //     document.getElementById('menuIsActive').checked = !!menu.is_active;
-
-    //     document.getElementById('tableModal').style.display = 'block';
-    // }
-
     // ===== FUNGSI UNTUK SUBMENU =====
 
     /**
@@ -694,6 +605,9 @@
             }, 5000);
         });
     });
+
+
+    
 </script>
     
 @endsection

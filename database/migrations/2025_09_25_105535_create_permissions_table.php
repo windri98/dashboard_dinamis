@@ -13,16 +13,12 @@ return new class extends Migration
     {
         Schema::create('permissions', function (Blueprint $table) {
             $table->id();
-            $table->string('menu_id')->constrained()->onDelete('cascade');
-            $table->string('menu_item_id')->constrained()->onDelete('cascade');
-            $table->string('action_id')->contrained()->onDelete('cascade');
+            $table->foreignId('menu_id')->constrained('dynamic_menus')->onDelete('cascade');
+            $table->foreignId('menu_item_id')->nullable()->constrained('dynamic_menu_items');
+            $table->foreignId('action_id')->nullable()->constrained('actions');
             $table->timestamps();
-
-            $table->unique([
-                'menu_id', 
-                'menu_item_id', 
-                'action_id'
-            ]);
+            
+            $table->index(['menu_id', 'menu_item_id', 'action_id']);
         });
     }
 

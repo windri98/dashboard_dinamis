@@ -51,6 +51,11 @@ Route::middleware(['auth'])->group(function () {
     });
 
 // ---------------------------------------------------------------------------------role-----------------------------------------------------------------------------------------------
+    // Maintenance routes
+    Route::post('/admin/permissions/cleanup', [DynamicMenuController::class, 'cleanupOrphanedPermissions']);
+    Route::post('/admin/permissions/bulk-sync', [DynamicMenuController::class, 'bulkSyncPermissions']);
+    Route::post('/admin/permissions/rebuild', [DynamicMenuController::class, 'rebuildAllPermissions']);
+    Route::get('/admin/permissions/stats', [DynamicMenuController::class, 'getPermissionStats']);
 
     // roles
     Route::get('/showrole', [RolesController::class, 'showrole'])->name('show.role');
@@ -62,6 +67,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/role/update/{id}', [RolesController::class, 'updaterole'])->name('update.role');
     Route::delete('/role/delete/{id}', [RolesController::class, 'deleterole'])->name('delete.role');
 
+    Route::get('/editrole/{id}', [RolesController::class, 'editrole'])->name('edit.role');
+    Route::put('/updaterole/{id}', [RolesController::class, 'updaterole'])->name('update.role');
     // user
     Route::get('/showuser', [UserController::class, 'showuser'])->name('show.user');
     Route::get('/addtuser', [UserController::class, 'adduser'])->name('add.user');

@@ -9,7 +9,7 @@ class Action extends Model
     protected $table = 'actions';
     protected $fillable = [
         'slug', 
-        'name'
+        'nama'
     ];
 
     //Relasi ke Permission
