@@ -32,7 +32,6 @@
     <div class="container-create">
         <form action="{{ route('create.role') }}" method="POST" class="form-container">
             @csrf
-
             {{-- Input Role --}}
             <div class="form-group">
                 <label for="role" class="form-label">Nama Role:</label>
@@ -42,7 +41,6 @@
                     value="{{ old('role') }}"
                     required>
             </div>
-
             {{-- Permissions Table --}}
             <div class="form-group">
                 <label class="form-label">Hak Akses:</label>
@@ -186,164 +184,165 @@
         </form>
     </div>
 </section>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Select all permissions (master checkbox)
-    const selectAllPermissions = document.getElementById('select_all_permissions');
-    selectAllPermissions.addEventListener('change', function() {
-        const allCheckboxes = document.querySelectorAll('.permission-checkbox');
-        allCheckboxes.forEach(checkbox => {
-            checkbox.checked = selectAllPermissions.checked;
+        document.addEventListener('DOMContentLoaded', function() {
+        // Select all permissions (master checkbox)
+        const selectAllPermissions = document.getElementById('select_all_permissions');
+        selectAllPermissions.addEventListener('change', function() {
+            const allCheckboxes = document.querySelectorAll('.permission-checkbox');
+            allCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllPermissions.checked;
+            });
+            
+            // Update semua checkbox "select all" lainnya
+            updateAllSelectAllStatus();
+            
+            if (selectAllPermissions.checked) {
+                alert('Perhatian: Mengaktifkan semua izin akan memberikan akses penuh ke seluruh sistem!');
+            }
         });
         
-        // Update semua checkbox "select all" lainnya
-        updateAllSelectAllStatus();
+        // Select all permissions untuk action tertentu
+        const selectAllActionButtons = document.querySelectorAll('.select-all-action');
+        selectAllActionButtons.forEach(button => {
+            button.addEventListener('change', function() {
+                const actionId = button.getAttribute('data-action');
+                const actionCheckboxes = document.querySelectorAll(`.permission-checkbox[data-action="${actionId}"]`);
+                
+                actionCheckboxes.forEach(checkbox => {
+                    checkbox.checked = button.checked;
+                });
+                
+                updateMasterSelectAllStatus();
+            });
+        });
         
-        if (selectAllPermissions.checked) {
-            alert('Perhatian: Mengaktifkan semua izin akan memberikan akses penuh ke seluruh sistem!');
-        }
-    });
-    
-    // Select all permissions untuk action tertentu
-    const selectAllActionButtons = document.querySelectorAll('.select-all-action');
-    selectAllActionButtons.forEach(button => {
-        button.addEventListener('change', function() {
-            const actionId = button.getAttribute('data-action');
+        // Select all permissions untuk menu tertentu
+        const selectMenuAllButtons = document.querySelectorAll('.select-menu-all');
+        selectMenuAllButtons.forEach(button => {
+            button.addEventListener('change', function() {
+                const menuId = button.getAttribute('data-menu');
+                const menuCheckboxes = document.querySelectorAll(`.permission-checkbox[data-menu="${menuId}"]`);
+                
+                menuCheckboxes.forEach(checkbox => {
+                    checkbox.checked = button.checked;
+                });
+                
+                updateMasterSelectAllStatus();
+            });
+        });
+        
+        // Select all permissions untuk menu-item tertentu
+        const selectItemAllButtons = document.querySelectorAll('.select-item-all');
+        selectItemAllButtons.forEach(button => {
+            button.addEventListener('change', function() {
+                const menuItemId = button.getAttribute('data-menu-item');
+                const itemCheckboxes = document.querySelectorAll(`.permission-checkbox[data-menu-item="${menuItemId}"]`);
+                
+                itemCheckboxes.forEach(checkbox => {
+                    checkbox.checked = button.checked;
+                });
+                
+                updateMasterSelectAllStatus();
+            });
+        });
+        
+        // Individual permission checkboxes
+        const permissionCheckboxes = document.querySelectorAll('.permission-checkbox');
+        permissionCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateSelectAllStatusForAction(checkbox.getAttribute('data-action'));
+                updateSelectAllStatusForMenu(checkbox.getAttribute('data-menu'));
+                updateSelectAllStatusForMenuItem(checkbox.getAttribute('data-menu-item'));
+                updateMasterSelectAllStatus();
+            });
+        });
+        
+        // Update status "select all" untuk action tertentu
+        function updateSelectAllStatusForAction(actionId) {
             const actionCheckboxes = document.querySelectorAll(`.permission-checkbox[data-action="${actionId}"]`);
+            const selectAllActionCheckbox = document.getElementById(`select_all_action_${actionId}`);
             
+            let allChecked = true;
             actionCheckboxes.forEach(checkbox => {
-                checkbox.checked = button.checked;
+                if (!checkbox.checked) {
+                    allChecked = false;
+                }
             });
             
-            updateMasterSelectAllStatus();
-        });
-    });
-    
-    // Select all permissions untuk menu tertentu
-    const selectMenuAllButtons = document.querySelectorAll('.select-menu-all');
-    selectMenuAllButtons.forEach(button => {
-        button.addEventListener('change', function() {
-            const menuId = button.getAttribute('data-menu');
+            if (selectAllActionCheckbox) {
+                selectAllActionCheckbox.checked = allChecked;
+            }
+        }
+        
+        // Update status "select all" untuk menu tertentu
+        function updateSelectAllStatusForMenu(menuId) {
+            if (!menuId) return;
+            
             const menuCheckboxes = document.querySelectorAll(`.permission-checkbox[data-menu="${menuId}"]`);
+            const selectMenuAllCheckbox = document.querySelector(`.select-menu-all[data-menu="${menuId}"]`);
             
+            let allChecked = true;
             menuCheckboxes.forEach(checkbox => {
-                checkbox.checked = button.checked;
+                if (!checkbox.checked) {
+                    allChecked = false;
+                }
             });
             
-            updateMasterSelectAllStatus();
-        });
-    });
-    
-    // Select all permissions untuk menu-item tertentu
-    const selectItemAllButtons = document.querySelectorAll('.select-item-all');
-    selectItemAllButtons.forEach(button => {
-        button.addEventListener('change', function() {
-            const menuItemId = button.getAttribute('data-menu-item');
+            if (selectMenuAllCheckbox) {
+                selectMenuAllCheckbox.checked = allChecked;
+            }
+        }
+        
+        // Update status "select all" untuk menu-item tertentu
+        function updateSelectAllStatusForMenuItem(menuItemId) {
+            if (!menuItemId) return;
+            
             const itemCheckboxes = document.querySelectorAll(`.permission-checkbox[data-menu-item="${menuItemId}"]`);
+            const selectItemAllCheckbox = document.querySelector(`.select-item-all[data-menu-item="${menuItemId}"]`);
             
+            let allChecked = true;
             itemCheckboxes.forEach(checkbox => {
-                checkbox.checked = button.checked;
+                if (!checkbox.checked) {
+                    allChecked = false;
+                }
             });
             
-            updateMasterSelectAllStatus();
-        });
+            if (selectItemAllCheckbox) {
+                selectItemAllCheckbox.checked = allChecked;
+            }
+        }
+        
+        // Update master "select all" checkbox
+        function updateMasterSelectAllStatus() {
+            const allCheckboxes = document.querySelectorAll('.permission-checkbox');
+            const selectAllPermissionsCheckbox = document.getElementById('select_all_permissions');
+            
+            let allChecked = true;
+            allCheckboxes.forEach(checkbox => {
+                if (!checkbox.checked) {
+                    allChecked = false;
+                }
+            });
+            
+            selectAllPermissionsCheckbox.checked = allChecked;
+        }
+        
+        // Update semua select all status
+        function updateAllSelectAllStatus() {
+            // Update action select all
+            const actions = [...new Set(Array.from(document.querySelectorAll('.permission-checkbox')).map(cb => cb.getAttribute('data-action')))];
+            actions.forEach(actionId => updateSelectAllStatusForAction(actionId));
+            
+            // Update menu select all
+            const menus = [...new Set(Array.from(document.querySelectorAll('.permission-checkbox')).map(cb => cb.getAttribute('data-menu')).filter(id => id))];
+            menus.forEach(menuId => updateSelectAllStatusForMenu(menuId));
+            
+            // Update menu-item select all
+            const menuItems = [...new Set(Array.from(document.querySelectorAll('.permission-checkbox')).map(cb => cb.getAttribute('data-menu-item')).filter(id => id))];
+            menuItems.forEach(menuItemId => updateSelectAllStatusForMenuItem(menuItemId));
+        }
     });
-    
-    // Individual permission checkboxes
-    const permissionCheckboxes = document.querySelectorAll('.permission-checkbox');
-    permissionCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            updateSelectAllStatusForAction(checkbox.getAttribute('data-action'));
-            updateSelectAllStatusForMenu(checkbox.getAttribute('data-menu'));
-            updateSelectAllStatusForMenuItem(checkbox.getAttribute('data-menu-item'));
-            updateMasterSelectAllStatus();
-        });
-    });
-    
-    // Update status "select all" untuk action tertentu
-    function updateSelectAllStatusForAction(actionId) {
-        const actionCheckboxes = document.querySelectorAll(`.permission-checkbox[data-action="${actionId}"]`);
-        const selectAllActionCheckbox = document.getElementById(`select_all_action_${actionId}`);
-        
-        let allChecked = true;
-        actionCheckboxes.forEach(checkbox => {
-            if (!checkbox.checked) {
-                allChecked = false;
-            }
-        });
-        
-        if (selectAllActionCheckbox) {
-            selectAllActionCheckbox.checked = allChecked;
-        }
-    }
-    
-    // Update status "select all" untuk menu tertentu
-    function updateSelectAllStatusForMenu(menuId) {
-        if (!menuId) return;
-        
-        const menuCheckboxes = document.querySelectorAll(`.permission-checkbox[data-menu="${menuId}"]`);
-        const selectMenuAllCheckbox = document.querySelector(`.select-menu-all[data-menu="${menuId}"]`);
-        
-        let allChecked = true;
-        menuCheckboxes.forEach(checkbox => {
-            if (!checkbox.checked) {
-                allChecked = false;
-            }
-        });
-        
-        if (selectMenuAllCheckbox) {
-            selectMenuAllCheckbox.checked = allChecked;
-        }
-    }
-    
-    // Update status "select all" untuk menu-item tertentu
-    function updateSelectAllStatusForMenuItem(menuItemId) {
-        if (!menuItemId) return;
-        
-        const itemCheckboxes = document.querySelectorAll(`.permission-checkbox[data-menu-item="${menuItemId}"]`);
-        const selectItemAllCheckbox = document.querySelector(`.select-item-all[data-menu-item="${menuItemId}"]`);
-        
-        let allChecked = true;
-        itemCheckboxes.forEach(checkbox => {
-            if (!checkbox.checked) {
-                allChecked = false;
-            }
-        });
-        
-        if (selectItemAllCheckbox) {
-            selectItemAllCheckbox.checked = allChecked;
-        }
-    }
-    
-    // Update master "select all" checkbox
-    function updateMasterSelectAllStatus() {
-        const allCheckboxes = document.querySelectorAll('.permission-checkbox');
-        const selectAllPermissionsCheckbox = document.getElementById('select_all_permissions');
-        
-        let allChecked = true;
-        allCheckboxes.forEach(checkbox => {
-            if (!checkbox.checked) {
-                allChecked = false;
-            }
-        });
-        
-        selectAllPermissionsCheckbox.checked = allChecked;
-    }
-    
-    // Update semua select all status
-    function updateAllSelectAllStatus() {
-        // Update action select all
-        const actions = [...new Set(Array.from(document.querySelectorAll('.permission-checkbox')).map(cb => cb.getAttribute('data-action')))];
-        actions.forEach(actionId => updateSelectAllStatusForAction(actionId));
-        
-        // Update menu select all
-        const menus = [...new Set(Array.from(document.querySelectorAll('.permission-checkbox')).map(cb => cb.getAttribute('data-menu')).filter(id => id))];
-        menus.forEach(menuId => updateSelectAllStatusForMenu(menuId));
-        
-        // Update menu-item select all
-        const menuItems = [...new Set(Array.from(document.querySelectorAll('.permission-checkbox')).map(cb => cb.getAttribute('data-menu-item')).filter(id => id))];
-        menuItems.forEach(menuItemId => updateSelectAllStatusForMenuItem(menuItemId));
-    }
-});
 </script>
 @endsection
