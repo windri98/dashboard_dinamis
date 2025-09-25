@@ -8,13 +8,15 @@ use App\Models\Roles;
 use App\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
     /**
      * Get user permissions as array of permission IDs (consistent with RolesController)
+     * UPDATED: Better error handling and logging
      */
-        private function getUserPermissions()
+    private function getUserPermissions()
     {
         $userRoleId = auth()->user()->role_id;
         $isSuperAdmin = $userRoleId == 1;
@@ -22,9 +24,22 @@ class DashboardController extends Controller
         $permissions = [];
         if (!$isSuperAdmin) {
             $userRole = Roles::find($userRoleId);
-            if ($userRole && !empty($userRole->akses)) {
-                // Karena ada casting 'akses' => 'array' di model, ini sudah pasti array
-                $permissions = is_array($userRole->akses) ? $userRole->akses : [];
+            if ($userRole && $userRole->akses) {
+                // UPDATED: Enhanced handling with logging
+                if (is_array($userRole->akses)) {
+                    $permissions = $userRole->akses;
+                    Log::info("User permissions loaded as array", ['permissions' => $permissions]);
+                } elseif (is_string($userRole->akses)) {
+                    $permissions = json_decode($userRole->akses, true) ?: [];
+                    Log::info("User permissions loaded as JSON string", [
+                        'raw' => $userRole->akses, 
+                        'decoded' => $permissions
+                    ]);
+                } else {
+                    Log::warning("Unknown permissions format", ['akses' => $userRole->akses]);
+                }
+            } else {
+                Log::info("No role found or no permissions set", ['role_id' => $userRoleId]);
             }
         }
         
@@ -33,14 +48,18 @@ class DashboardController extends Controller
 
     /**
      * Check if user has permission berdasarkan menu dan action
+     * UPDATED: Added logging and better error handling
      */
     private function hasPermission($menuKey, $actionKey)
     {
         [$permissionIds, $isSuperAdmin] = $this->getUserPermissions();
         
-        if ($isSuperAdmin) return true;
+        if ($isSuperAdmin) {
+            Log::info("SuperAdmin access granted", ['menu' => $menuKey, 'action' => $actionKey]);
+            return true;
+        }
         
-        // Cari permission berdasarkan menu permission_key dan action nama
+        // UPDATED: Added query logging
         $permission = Permission::whereHas('menu', function($q) use ($menuKey) {
                 $q->where('permission_key', $menuKey);
             })
@@ -50,60 +69,205 @@ class DashboardController extends Controller
             ->first();
             
         if (!$permission) {
+            Log::warning("Permission not found in database", [
+                'menu_key' => $menuKey,
+                'action_key' => $actionKey
+            ]);
             return false;
         }
         
-        return in_array($permission->id, $permissionIds);
+        $hasAccess = in_array($permission->id, $permissionIds);
+        Log::info("Permission check result", [
+            'menu' => $menuKey,
+            'action' => $actionKey,
+            'permission_id' => $permission->id,
+            'user_permissions' => $permissionIds,
+            'has_access' => $hasAccess
+        ]);
+        
+        return $hasAccess;
     }
 
     /**
      * Check menu permission untuk filtering di dashboard
+     * UPDATED: Consistent with blade logic and better logging
      */
     private function hasMenuPermission($menuPermissionKey)
     {
         [$permissionIds, $isSuperAdmin] = $this->getUserPermissions();
         
-        if ($isSuperAdmin) return true;
+        if ($isSuperAdmin) {
+            Log::info("SuperAdmin menu access granted", ['menu' => $menuPermissionKey]);
+            return true;
+        }
         
-        // Cari permission untuk menu dengan permission_key
+        // UPDATED: Enhanced query with better logging
         $menuPermissions = Permission::whereHas('menu', function($q) use ($menuPermissionKey) {
             $q->where('permission_key', $menuPermissionKey);
         })->pluck('id')->toArray();
         
+        if (empty($menuPermissions)) {
+            Log::warning("No permissions found for menu", ['menu_key' => $menuPermissionKey]);
+            return false;
+        }
+        
         // Check apakah user punya minimal 1 permission untuk menu ini
-        return !empty(array_intersect($menuPermissions, $permissionIds));
+        $hasAccess = !empty(array_intersect($menuPermissions, $permissionIds));
+        
+        Log::info("Menu permission check result", [
+            'menu' => $menuPermissionKey,
+            'menu_permissions' => $menuPermissions,
+            'user_permissions' => $permissionIds,
+            'intersection' => array_intersect($menuPermissions, $permissionIds),
+            'has_access' => $hasAccess
+        ]);
+        
+        return $hasAccess;
     }
 
+    /**
+     * UPDATED: Enhanced index with better error handling
+     */
     public function index()
     {
-        [$permissions, $isSuperAdmin] = $this->getUserPermissions();
-        
-        // Fetch active dynamic menus with permission filtering
-        $dynamicMenus = DynamicMenu::active()
-            ->ordered()
-            ->with('activeItems')
-            ->get()
-            ->filter(function($menu) use ($isSuperAdmin) {
-                if ($isSuperAdmin) return true;
-                
-                // Check menu permission
-                return $this->hasMenuPermission($menu->permission_key);
-            });
+        try {
+            [$permissions, $isSuperAdmin] = $this->getUserPermissions();
+            
+            // UPDATED: Enhanced logging for debugging
+            Log::info("Dashboard access", [
+                'user_id' => auth()->id(),
+                'role_id' => auth()->user()->role_id,
+                'is_super_admin' => $isSuperAdmin,
+                'permissions_count' => count($permissions)
+            ]);
+            
+            // Fetch active dynamic menus with permission filtering
+            $dynamicMenus = DynamicMenu::active()
+                ->ordered()
+                ->with('activeItems')
+                ->get()
+                ->filter(function($menu) use ($isSuperAdmin) {
+                    if ($isSuperAdmin) return true;
+                    
+                    // UPDATED: Enhanced permission check with logging
+                    $hasAccess = $this->hasMenuPermission($menu->permission_key);
+                    Log::info("Menu filter result", [
+                        'menu_name' => $menu->name,
+                        'permission_key' => $menu->permission_key,
+                        'has_access' => $hasAccess
+                    ]);
+                    
+                    return $hasAccess;
+                });
 
-        // Get dashboard statistics
-        $stats = [
-            'total_menus' => $dynamicMenus->count(),
-            'total_items' => $dynamicMenus->sum(function($menu) { 
-                return $menu->activeItems->count(); 
-            }),
-            'total_tables' => DynamicTable::active()->count(),
-            'total_users' => User::count(),
+            Log::info("Filtered menus count", ['total' => $dynamicMenus->count()]);
+
+            // Get dashboard statistics
+            $stats = [
+                'total_menus' => $dynamicMenus->count(),
+                'total_items' => $dynamicMenus->sum(function($menu) { 
+                    return $menu->activeItems->count(); 
+                }),
+                'total_tables' => DynamicTable::active()->count(),
+                'total_users' => User::count(),
+            ];
+
+            return view('dashboard.index', [
+                'dynamicMenus' => $dynamicMenus,
+                'stats' => $stats
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error("Dashboard index error", ['error' => $e->getMessage()]);
+            return view('dashboard.index', [
+                'dynamicMenus' => collect(),
+                'stats' => [
+                    'total_menus' => 0,
+                    'total_items' => 0,
+                    'total_tables' => 0,
+                    'total_users' => 0,
+                ]
+            ])->with('error', 'Terjadi kesalahan saat memuat dashboard');
+        }
+    }
+
+    /**
+     * NEW METHOD: Debug permissions - untuk troubleshooting
+     */
+    public function debugPermissions()
+    {
+        if (!auth()->check()) {
+            return response()->json(['error' => 'Not authenticated'], 401);
+        }
+
+        $user = auth()->user();
+        [$permissions, $isSuperAdmin] = $this->getUserPermissions();
+
+        $debugInfo = [
+            'user_info' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'role_id' => $user->role_id,
+                'is_super_admin' => $isSuperAdmin
+            ],
+            'role_info' => [],
+            'permissions_raw' => [],
+            'permissions_decoded' => $permissions,
+            'available_menus' => [],
+            'menu_permissions' => []
         ];
 
-        return view('dashboard.index', [
-            'dynamicMenus' => $dynamicMenus,
-            'stats' => $stats
-        ]);
+        // Get role info
+        if ($user->role_id) {
+            $role = Roles::find($user->role_id);
+            if ($role) {
+                $debugInfo['role_info'] = [
+                    'id' => $role->id,
+                    'nama' => $role->nama,
+                    'akses_raw' => $role->akses,
+                    'akses_type' => gettype($role->akses)
+                ];
+            }
+        }
+
+        // Get all available permissions for comparison
+        $allPermissions = Permission::with(['menu', 'action'])->get();
+        foreach ($allPermissions as $perm) {
+            $debugInfo['permissions_raw'][] = [
+                'id' => $perm->id,
+                'menu_name' => $perm->menu->name ?? 'N/A',
+                'menu_permission_key' => $perm->menu->permission_key ?? 'N/A',
+                'action_name' => $perm->action->nama ?? 'N/A',
+                'user_has_access' => in_array($perm->id, $permissions)
+            ];
+        }
+
+        // Get dynamic menus
+        $dynamicMenus = DynamicMenu::active()->get();
+        foreach ($dynamicMenus as $menu) {
+            $hasAccess = $isSuperAdmin || $this->hasMenuPermission($menu->permission_key);
+            $debugInfo['available_menus'][] = [
+                'id' => $menu->id,
+                'name' => $menu->name,
+                'permission_key' => $menu->permission_key,
+                'user_has_access' => $hasAccess
+            ];
+
+            // Get permissions for this menu
+            $menuPermissions = Permission::whereHas('menu', function($q) use ($menu) {
+                $q->where('permission_key', $menu->permission_key);
+            })->with('action')->get();
+
+            $debugInfo['menu_permissions'][$menu->permission_key] = $menuPermissions->map(function($perm) use ($permissions) {
+                return [
+                    'id' => $perm->id,
+                    'action_name' => $perm->action->nama ?? 'N/A',
+                    'user_has_this' => in_array($perm->id, $permissions)
+                ];
+            });
+        }
+
+        return response()->json($debugInfo, 200, [], JSON_PRETTY_PRINT);
     }
 
     // ==========================================TABEL======================================
@@ -214,15 +378,15 @@ class DashboardController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
-            \Log::error('Store table data error: ' . $e->getMessage());
+            Log::error('Store table data error: ' . $e->getMessage());
             return back()->with('error', 'Gagal menambahkan data: ' . $e->getMessage());
         }
     }
 
     public function updateTableData(Request $request, $table, $id)
     {
-        \Log::info("Update called - Table: {$table}, ID: {$id}");
-        \Log::info("Request data: " . json_encode($request->all()));
+        Log::info("Update called - Table: {$table}, ID: {$id}");
+        Log::info("Request data: " . json_encode($request->all()));
         
         if (!$this->hasPermission('master_data', 'Edit/Update')) {
             return back()->with('error', 'Anda tidak memiliki permission untuk mengedit data');
@@ -269,10 +433,10 @@ class DashboardController extends Controller
             }
             
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation error: ' . json_encode($e->errors()));
+            Log::error('Validation error: ' . json_encode($e->errors()));
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
-            \Log::error('Update table data error: ' . $e->getMessage());
+            Log::error('Update table data error: ' . $e->getMessage());
             return back()->with('error', 'Gagal memperbarui data: ' . $e->getMessage());
         }
     }
@@ -297,7 +461,7 @@ class DashboardController extends Controller
             }
             
         } catch (\Exception $e) {
-            \Log::error('Delete table data error: ' . $e->getMessage());
+            Log::error('Delete table data error: ' . $e->getMessage());
             return back()->with('error', 'Gagal menghapus data: ' . $e->getMessage());
         }
     }
@@ -354,10 +518,10 @@ class DashboardController extends Controller
             }
             
             $rules[$column->column_name] = implode('|', $columnRules);
-            \Log::info("Building rule for: " . $column->column_name . " - Type: " . $column->type);
+            Log::info("Building rule for: " . $column->column_name . " - Type: " . $column->type);
         }
         
-        \Log::info("Final validation rules:", $rules);
+        Log::info("Final validation rules:", $rules);
         return $rules;
     }
 }
