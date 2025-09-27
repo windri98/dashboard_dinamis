@@ -36,40 +36,74 @@
                                 <!-- Container permissions yang bisa di-toggle -->
                                 <div class="permissions-container">
                                     @php
-                                        $permissions = is_string($role->akses) ? json_decode($role->akses, true) : $role->akses;
-                                        $permissions = is_array($permissions) ? $permissions : [];
-                                        $actionLabels = [
-                                            'read' => '<span class="badge bg-info">Read</span>',
-                                            'create' => '<span class="badge bg-success">Create</span>',
-                                            'edit' => '<span class="badge bg-warning">Edit</span>',
-                                            'delete' => '<span class="badge bg-danger">Delete</span>',
-                                        ];
+                                        // Decode permission IDs dari akses
+                                        $permissionIds = [];
+                                        if ($role->akses === true || $role->akses === 'true' || $role->akses === '1') {
+                                            $permissionIds = 'full_access';
+                                        } elseif (is_string($role->akses)) {
+                                            $decoded = json_decode($role->akses, true);
+                                            $permissionIds = is_array($decoded) ? $decoded : [];
+                                        } elseif (is_array($role->akses)) {
+                                            $permissionIds = $role->akses;
+                                        }
+                                        
+                                        // Get readable permissions
+                                        $readablePermissions = [];
+                                        if ($permissionIds === 'full_access') {
+                                            $readablePermissions = 'full_access';
+                                        } elseif (!empty($permissionIds)) {
+                                            $permissions = App\Models\Permission::with(['menu', 'menuItem', 'action'])
+                                                            ->whereIn('id', $permissionIds)
+                                                            ->get();
+                                            $grouped = [];
+                                            foreach ($permissions as $permission) {
+                                                $menuName = $permission->menu->name ?? 'Unknown Menu';
+                                                $menuItemName = $permission->menuItem->name ?? null;
+                                                $actionName = $permission->action->slug ?? 'Unknown Action';
+                                                if ($menuItemName) {
+                                                    $key = $menuName . ' > ' . $menuItemName;
+                                                } else {
+                                                    $key = $menuName;
+                                                }
+                                                
+                                                if (!isset($grouped[$key])) {
+                                                    $grouped[$key] = [];
+                                                }
+                                                $grouped[$key][] = $actionName;
+                                            }
+                                            $readablePermissions = $grouped;
+                                        }
                                     @endphp
                                     
-                                    <div class="permissions-content">
-                                        @if(empty($permissions))
-                                            <span class="badge bg-secondary">All Akses</span>
+                                    <div class="permissions-content"><div class="permissions-content">
+                                        @if($readablePermissions === 'full_access')
+                                            <span class="badge bg-primary">Full Access</span>
+                                        @elseif(empty($readablePermissions))
+                                            <span class="badge bg-secondary">No Access</span>
                                         @else
-                                            @foreach($permissions as $moduleSlug => $actions)
-                                                @php
-                                                    $moduleName = isset($modules) ? ($modules->firstWhere('slug', $moduleSlug)->nama ?? $moduleSlug) : $moduleSlug;
-                                                @endphp
-                                                <div class="permission-item">
-                                                    <strong>{{ $moduleName }}:</strong>
-                                                    @if($actions === true)
-                                                        <span class="badge bg-primary">Akses Penuh</span>
-                                                    @elseif(is_array($actions))
+                                            @foreach($readablePermissions as $menuPath => $actions)
+                                                <div class="permission-item" style="margin-bottom: 8px;">
+                                                    <strong style="color: #333;">{{ $menuPath }}:</strong>
+                                                    <div style="margin-top: 4px;">
                                                         @foreach($actions as $action)
-                                                            {!! $actionLabels[$action] ?? "<span class='badge bg-secondary'>{$action}</span>" !!}
+                                                            @php
+                                                                $badgeClass = match(strtolower($action)) {
+                                                                    'create' => 'bg-success',
+                                                                    'read', 'view' => 'bg-info',
+                                                                    'update', 'edit' => 'bg-warning',
+                                                                    'delete' => 'btn-danger',
+                                                                    default => 'bg-secondary'
+                                                                };
+                                                            @endphp
+                                                            <span class="badge {{ $badgeClass }}" style="margin-right: 4px; margin-bottom: 2px;">{{ $action }}</span>
                                                         @endforeach
-                                                    @endif
+                                                    </div>
                                                 </div>
                                             @endforeach
                                         @endif
                                     </div>
                                 </div>
                             </td>
-
                             <td class="action-cell">
                                 <div class="action-buttons">
                                     <form action="{{ route('edit.role', $role->id) }}">

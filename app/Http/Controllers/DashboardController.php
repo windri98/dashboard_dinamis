@@ -17,34 +17,45 @@ class DashboardController extends Controller
      * UPDATED: Better error handling and logging
      */
     private function getUserPermissions()
-    {
-        $userRoleId = auth()->user()->role_id;
-        $isSuperAdmin = $userRoleId == 1;
-        
-        $permissions = [];
-        if (!$isSuperAdmin) {
-            $userRole = Roles::find($userRoleId);
-            if ($userRole && $userRole->akses) {
-                // UPDATED: Enhanced handling with logging
-                if (is_array($userRole->akses)) {
-                    $permissions = $userRole->akses;
-                    Log::info("User permissions loaded as array", ['permissions' => $permissions]);
-                } elseif (is_string($userRole->akses)) {
-                    $permissions = json_decode($userRole->akses, true) ?: [];
-                    Log::info("User permissions loaded as JSON string", [
-                        'raw' => $userRole->akses, 
-                        'decoded' => $permissions
-                    ]);
-                } else {
-                    Log::warning("Unknown permissions format", ['akses' => $userRole->akses]);
-                }
+{
+    $userRoleId = auth()->user()->role_id;
+    $isSuperAdmin = $userRoleId == 1;
+
+    $permissions = [];
+
+    if ($isSuperAdmin) {
+        // SuperAdmin otomatis memiliki semua permission
+        Log::info("SuperAdmin detected, full access granted", ['role_id' => $userRoleId]);
+    } else {
+        $userRole = Roles::find($userRoleId);
+
+        if (!$userRole) {
+            Log::warning("Role not found for user", ['user_id' => auth()->id(), 'role_id' => $userRoleId]);
+        } elseif (empty($userRole->akses)) {
+            Log::info("No permissions set for this role", ['role_id' => $userRoleId]);
+        } else {
+            // Laravel cast 'akses' ke array otomatis
+            if (is_array($userRole->akses)) {
+                $permissions = $userRole->akses;
+                Log::info("User permissions loaded as array", ['permissions' => $permissions]);
             } else {
-                Log::info("No role found or no permissions set", ['role_id' => $userRoleId]);
+                // Hanya untuk keamanan jika field DB menyimpan string JSON lama
+                $raw = $userRole->getRawOriginal('akses');
+                if (is_string($raw)) {
+                    $decoded = json_decode($raw, true);
+                    $permissions = is_array($decoded) ? $decoded : [];
+                    Log::info("User permissions loaded from raw JSON", ['raw' => $raw, 'decoded' => $permissions]);
+                } else {
+                    $permissions = [];
+                    Log::warning("Unknown format for permissions", ['akses' => $userRole->akses]);
+                }
             }
         }
-        
-        return [$permissions, $isSuperAdmin];
     }
+
+    return [$permissions, $isSuperAdmin];
+}
+
 
     /**
      * Check if user has permission berdasarkan menu dan action

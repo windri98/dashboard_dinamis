@@ -23,18 +23,14 @@ class RolesController extends Controller
     /**
      * Show form to add new role
      */
-    public function addrole()
+        public function addrole()
     {
         try {
-            // Ambil semua permissions dengan relasi menu dan menu_item
-            $permissions = Permission::with(['menu', 'menuItem'])->get();
-            
-            // Ambil actions dari database
+            // Tambahkan 'action' ke with()
+            $permissions = Permission::with(['menu', 'menuItem', 'action'])->get();
             $actions = Action::all();
             
-            // Group permissions berdasarkan menu
             $groupedPermissions = $this->groupPermissionsByMenu($permissions);
-            
             return view('dashboard.role.create', [
                 'permissions' => $permissions,
                 'groupedPermissions' => $groupedPermissions,
@@ -61,7 +57,7 @@ class RolesController extends Controller
             
             $role = new Roles();
             $role->role = $request->role;
-            $role->akses = json_encode($request->permissions ?? []);
+            $role->akses = $request->permissions ?? [];
             $role->save();
             
             DB::commit();
@@ -78,17 +74,15 @@ class RolesController extends Controller
     /**
      * Show form to edit role
      */
-    public function editrole($id)
+        public function editrole($id)
     {
         try {
             $role = Roles::findOrFail($id);
-            $permissions = Permission::with(['menu', 'menuItem'])->get();
+            // Tambahkan 'action' ke with()
+            $permissions = Permission::with(['menu', 'menuItem', 'action'])->get();
             $actions = Action::all();
             
-            // Decode permissions dari JSON
             $assignedPermissions = $this->decodeRolePermissions($role->akses);
-            
-            // Group permissions berdasarkan menu
             $groupedPermissions = $this->groupPermissionsByMenu($permissions);
             
             return view('dashboard.role.edit', [
@@ -103,6 +97,7 @@ class RolesController extends Controller
             return back()->withErrors(['error' => 'Error loading edit role: ' . $e->getMessage()]);
         }
     }
+
 
     /**
      * Update role
@@ -168,14 +163,13 @@ class RolesController extends Controller
     /**
      * Group permissions berdasarkan menu untuk tampilan
      */
-    private function groupPermissionsByMenu($permissions)
+        private function groupPermissionsByMenu($permissions)
     {
         $grouped = [];
         
         foreach ($permissions as $permission) {
             $menuName = $permission->menu->name ?? 'Unknown Menu';
             
-            // Inisialisasi grup menu jika belum ada
             if (!isset($grouped[$menuName])) {
                 $grouped[$menuName] = [
                     'menu' => $permission->menu,
@@ -184,7 +178,6 @@ class RolesController extends Controller
                 ];
             }
             
-            // Jika permission untuk menu-item
             if ($permission->menuItem) {
                 $menuItemName = $permission->menuItem->name;
                 
@@ -195,9 +188,12 @@ class RolesController extends Controller
                     ];
                 }
                 
+                // Tambahkan info action name ke permission
+                $permission->action_name = $permission->action->name ?? 'Unknown Action';
                 $grouped[$menuName]['menu_items'][$menuItemName]['permissions'][] = $permission;
             } else {
                 // Permission langsung untuk menu
+                $permission->action_name = $permission->action->name ?? 'Unknown Action';
                 $grouped[$menuName]['menu_permissions'][] = $permission;
             }
         }
@@ -258,5 +254,31 @@ class RolesController extends Controller
         return Permission::with(['menu', 'menuItem', 'action'])
                         ->whereIn('id', $rolePermissions)
                         ->get();
+    }
+
+    /**
+ * Get permissions dalam format readable
+ */
+    public function getReadablePermissions($roleId)
+    {
+        $role = Roles::findOrFail($roleId);
+        $permissionIds = $this->decodeRolePermissions($role->akses);
+
+        return Permission::with(['menu', 'menuItem', 'action'])
+                            ->whereIn('id', $permissionIds)
+                            ->get()
+                            ->map(function($permission) {
+                                return [
+                                    'id' => $permission->id,
+                                    'menu' => $permission->menu->name ?? 'Unknown',
+                                    'menu_item' => $permission->menuItem->name ?? null,
+                                    'action' => $permission->action->name ?? 'Unknown',
+                                    'full_name' => sprintf('%s%s - %s', 
+                                        $permission->menu->name ?? 'Unknown',
+                                        $permission->menuItem ? ' > ' . $permission->menuItem->name : '',
+                                        $permission->action->name ?? 'Unknown'
+                                    )
+                                ];
+                            });
     }
 }

@@ -1,164 +1,109 @@
 @php
-    // Redirect to forbidden page if not logged in
+    // Redirect to login jika tidak terautentikasi
     if (!auth()->check()) {
         header('Location: /login');
         exit;
     }
 
+    use App\Models\Roles;
+    use App\Models\Permission;
+    use App\Models\DynamicMenu;
+
+    // Ambil data user
     $userRoleId = auth()->user()->role_id;
     $isSuperAdmin = $userRoleId == 1;
-    $userRole = App\Models\Roles::find($userRoleId);
+    $userRole = Roles::find($userRoleId);
 
-    // UPDATED: Enhanced permission handling with better logging
+    // Debug info
     $permissionIds = [];
     $debugInfo = [];
-    
+
+    // Ambil permission user dengan support untuk "Full access"
     if (!$isSuperAdmin && $userRole && !empty($userRole->akses)) {
-        $debugInfo['raw_akses'] = $userRole->akses;
-        $debugInfo['akses_type'] = gettype($userRole->akses);
-        
-        if (is_array($userRole->akses)) {
-            $permissionIds = $userRole->akses;
-            $debugInfo['method'] = 'array_direct';
-        } elseif (is_string($userRole->akses)) {
-            $decoded = json_decode($userRole->akses, true);
-            if ($decoded && is_array($decoded)) {
-                $permissionIds = $decoded;
-                $debugInfo['method'] = 'json_decoded';
-            } else {
-                $debugInfo['method'] = 'json_decode_failed';
-                $debugInfo['json_error'] = json_last_error_msg();
-            }
+        $permissionsRaw = $userRole->akses;
+
+        // Handle "Full access" string
+        if ($permissionsRaw === 'Full access' || $permissionsRaw === 'full access') {
+            $permissionIds = Permission::pluck('id')->toArray();
+        } else if (!is_array($permissionsRaw)) {
+            // fallback jika data berupa string JSON
+            $permissionsRaw = json_decode($userRole->getRawOriginal('akses'), true) ?: [];
+            $permissionIds = is_array($permissionsRaw) ? array_map('intval', $permissionsRaw) : [];
+        } else {
+            $permissionIds = is_array($permissionsRaw) ? array_map('intval', $permissionsRaw) : [];
         }
+        
         $debugInfo['final_permissions'] = $permissionIds;
     }
 
-    // UPDATED: Enhanced permission checking with debug info
+    // Fungsi cek permission action
     function hasPermission($menuKey, $actionKey, $permissionIds, $isSuperAdmin, &$debugInfo = null) {
         if ($isSuperAdmin) {
-            if ($debugInfo !== null) {
-                $debugInfo['checks'][] = [
-                    'menu' => $menuKey, 
-                    'action' => $actionKey, 
-                    'result' => 'superadmin_granted'
-                ];
-            }
+            if ($debugInfo) $debugInfo['checks'][] = ['menu'=>$menuKey,'action'=>$actionKey,'result'=>'superadmin_granted'];
             return true;
         }
-        
-        // Query permission berdasarkan menu permission_key dan action nama
-        $permission = App\Models\Permission::whereHas('menu', function($q) use ($menuKey) {
-                $q->where('permission_key', $menuKey);
-            })
-            ->whereHas('action', function($q) use ($actionKey) {
-                $q->where('nama', $actionKey);
-            })
+
+        $permission = Permission::whereHas('menu', fn($q) => $q->where('permission_key', $menuKey))
+            ->whereHas('action', fn($q) => $q->where('nama', $actionKey))
             ->first();
-            
+
         if (!$permission) {
-            if ($debugInfo !== null) {
-                $debugInfo['checks'][] = [
-                    'menu' => $menuKey, 
-                    'action' => $actionKey, 
-                    'result' => 'permission_not_found'
-                ];
-            }
+            if ($debugInfo) $debugInfo['checks'][] = ['menu'=>$menuKey,'action'=>$actionKey,'result'=>'permission_not_found'];
             return false;
         }
-        
-        $hasAccess = in_array($permission->id, $permissionIds);
-        if ($debugInfo !== null) {
+
+        $hasAccess = in_array((int)$permission->id, $permissionIds);
+        if ($debugInfo) {
             $debugInfo['checks'][] = [
-                'menu' => $menuKey, 
-                'action' => $actionKey, 
-                'permission_id' => $permission->id,
-                'user_permissions' => $permissionIds,
-                'result' => $hasAccess ? 'granted' : 'denied'
+                'menu'=>$menuKey,
+                'action'=>$actionKey,
+                'permission_id'=>$permission->id,
+                'user_permissions'=>$permissionIds,
+                'result'=>$hasAccess?'granted':'denied'
             ];
         }
-        
         return $hasAccess;
     }
 
-    // UPDATED: Enhanced menu access checking with debug info
-    function hasMenuAccess($menuPermissionKey, $permissionIds, $isSuperAdmin, &$debugInfo = null) {
+    // Fungsi cek menu access
+    function hasMenuAccess($menuKey, $permissionIds, $isSuperAdmin, &$debugInfo = null) {
         if ($isSuperAdmin) {
-            if ($debugInfo !== null) {
-                $debugInfo['menu_checks'][] = [
-                    'menu' => $menuPermissionKey, 
-                    'result' => 'superadmin_granted'
-                ];
-            }
+            if ($debugInfo) $debugInfo['menu_checks'][] = ['menu'=>$menuKey,'result'=>'superadmin_granted'];
             return true;
         }
-        
-        // Get all permission IDs for this menu
-        $menuPermissions = App\Models\Permission::whereHas('menu', function($q) use ($menuPermissionKey) {
-            $q->where('permission_key', $menuPermissionKey);
-        })->pluck('id')->toArray();
-        
-        if (empty($menuPermissions)) {
-            if ($debugInfo !== null) {
-                $debugInfo['menu_checks'][] = [
-                    'menu' => $menuPermissionKey, 
-                    'result' => 'no_permissions_found'
-                ];
-            }
-            return false;
-        }
-        
-        // Check if user has at least one permission for this menu
+
+        $menuPermissions = Permission::whereHas('menu', fn($q) => $q->where('permission_key', $menuKey))->pluck('id')->toArray();
         $intersection = array_intersect($menuPermissions, $permissionIds);
         $hasAccess = !empty($intersection);
-        
-        if ($debugInfo !== null) {
+
+        if ($debugInfo) {
             $debugInfo['menu_checks'][] = [
-                'menu' => $menuPermissionKey,
-                'menu_permissions' => $menuPermissions,
-                'user_permissions' => $permissionIds,
-                'intersection' => $intersection,
-                'result' => $hasAccess ? 'granted' : 'denied'
+                'menu'=>$menuKey,
+                'menu_permissions'=>$menuPermissions,
+                'user_permissions'=>$permissionIds,
+                'intersection'=>$intersection,
+                'result'=>$hasAccess?'granted':'denied'
             ];
         }
-        
+
         return $hasAccess;
     }
 
-    // UPDATED: Load dynamic menus with enhanced debugging
-    $dynamicMainMenus = \App\Models\DynamicMenu::active()
-        ->byCategory('main')
-        ->ordered()
-        ->with('activeItems')
-        ->get()
-        ->filter(function($menu) use ($permissionIds, $isSuperAdmin, &$debugInfo) {
-            return hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin, $debugInfo);
-        });
+    // Load dynamic menus
+    $dynamicMainMenus = DynamicMenu::active()->byCategory('main')->ordered()->with('activeItems')->get()
+        ->filter(fn($menu) => hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin, $debugInfo));
 
-    $dynamicSettingsMenus = \App\Models\DynamicMenu::active()
-        ->byCategory('settings')
-        ->ordered()
-        ->with('activeItems')
-        ->get()
-        ->filter(function($menu) use ($permissionIds, $isSuperAdmin, &$debugInfo) {
-            return hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin, $debugInfo);
-        });
+    $dynamicSettingsMenus = DynamicMenu::active()->byCategory('settings')->ordered()->with('activeItems')->get()
+        ->filter(fn($menu) => hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin, $debugInfo));
 
-    // UPDATED: Final debug summary
     $debugInfo['final_results'] = [
-        'main_menus_count' => $dynamicMainMenus->count(),
-        'settings_menus_count' => $dynamicSettingsMenus->count(),
-        'user_role_id' => $userRoleId,
-        'is_super_admin' => $isSuperAdmin
+        'main_menus_count'=>$dynamicMainMenus->count(),
+        'settings_menus_count'=>$dynamicSettingsMenus->count(),
+        'user_role_id'=>$userRoleId,
+        'is_super_admin'=>$isSuperAdmin
     ];
 
-    // UPDATED: Show debug for specific role IDs (uncomment untuk debug)
-    // $debugRoleIds = [2, 3]; // Ganti dengan role_id yang bermasalah
-    // if (in_array($userRoleId, $debugRoleIds)) {
-    //     echo "<pre style='background: #f5f5f5; padding: 10px; margin: 10px; font-size: 12px;'>";
-    //     echo "DEBUG INFO FOR ROLE ID: " . $userRoleId . "\n";
-    //     echo json_encode($debugInfo, JSON_PRETTY_PRINT);
-    //     echo "</pre>";
-    // }
+    // Production ready - debug removed for production use
 @endphp
 
 <aside class="sidebar">
@@ -300,17 +245,24 @@
             </div>
         @endforeach
 
-        <!-- Privilege Menu -->
-        @if($isSuperAdmin || hasPermission('privilege', 'View/Lihat', $permissionIds, $isSuperAdmin))
+        <!-- Management Menu (Roles & Users) -->
+        @php
+            // Check if user has any management permissions
+            $hasRoleAccess = $isSuperAdmin || hasPermission('roles', 'View/Lihat', $permissionIds, $isSuperAdmin);
+            $hasUserAccess = $isSuperAdmin || hasPermission('users', 'View/Lihat', $permissionIds, $isSuperAdmin);
+            $hasManagementAccess = $hasRoleAccess || $hasUserAccess;
+        @endphp
+
+        @if($hasManagementAccess)
         <div class="menu-item dropdown">
             <div class="dropdown-header">
                 <i class="fa-solid fa-shield"></i>
-                <span class="menu-text">Privilege</span>
+                <span class="menu-text">Management</span>
                 <i class="fas fa-chevron-down dropdown-icon"></i>
             </div>
 
             <div class="dropdown-content">
-                @if($isSuperAdmin || hasPermission('roles', 'View/Lihat', $permissionIds, $isSuperAdmin))
+                @if($hasRoleAccess)
                 <div class="sub-menu-item">
                     <a href="/showrole">
                         <i class="fas fa-user-cog"></i>
@@ -319,7 +271,7 @@
                 </div>
                 @endif
 
-                @if($isSuperAdmin || hasPermission('users', 'View/Lihat', $permissionIds, $isSuperAdmin))
+                @if($hasUserAccess)
                 <div class="sub-menu-item">
                     <a href="/showuser">
                         <i class="fa fa-users" aria-hidden="true"></i>

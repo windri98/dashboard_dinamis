@@ -17,11 +17,12 @@ class Roles extends Model
         'akses' => 'array'  // Otomatis convert JSON ke array
     ];
     
-    public function hasPermission($permissionId)
-    {
-        $permissions = $this->akses ?? [];
-        return in_array($permissionId, $permissions);
-    }
+    // public function hasPermission($permissionId)
+    // {
+    //     $permissions = $this->akses ?? [];
+    //     return in_array($permissionId, $permissions);
+    // }
+    
     // Model Role
     public function users()
     {
