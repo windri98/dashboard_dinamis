@@ -16,7 +16,10 @@ class DashboardController extends Controller
      * Get user permissions as array of permission IDs (consistent with RolesController)
      * UPDATED: Better error handling and logging
      */
-    private function getUserPermissions()
+    /**
+ * Get user permissions as array of permission IDs (FIXED JSON PARSING)
+ */
+private function getUserPermissions()
 {
     $userRoleId = auth()->user()->role_id;
     $isSuperAdmin = $userRoleId == 1;
@@ -24,7 +27,6 @@ class DashboardController extends Controller
     $permissions = [];
 
     if ($isSuperAdmin) {
-        // SuperAdmin otomatis memiliki semua permission
         Log::info("SuperAdmin detected, full access granted", ['role_id' => $userRoleId]);
     } else {
         $userRole = Roles::find($userRoleId);
@@ -34,20 +36,58 @@ class DashboardController extends Controller
         } elseif (empty($userRole->akses)) {
             Log::info("No permissions set for this role", ['role_id' => $userRoleId]);
         } else {
-            // Laravel cast 'akses' ke array otomatis
-            if (is_array($userRole->akses)) {
-                $permissions = $userRole->akses;
-                Log::info("User permissions loaded as array", ['permissions' => $permissions]);
+            // FIXED: Handle "Full access"
+            if ($userRole->akses === 'Full access' || $userRole->akses === 'full access') {
+                $permissions = Permission::pluck('id')->toArray();
+                Log::info("Full access granted", ['permissions_count' => count($permissions)]);
             } else {
-                // Hanya untuk keamanan jika field DB menyimpan string JSON lama
-                $raw = $userRole->getRawOriginal('akses');
-                if (is_string($raw)) {
-                    $decoded = json_decode($raw, true);
-                    $permissions = is_array($decoded) ? $decoded : [];
-                    Log::info("User permissions loaded from raw JSON", ['raw' => $raw, 'decoded' => $permissions]);
+                // FIXED: Enhanced JSON parsing
+                $rawValue = $userRole->akses;
+                
+                // Check if it's already an array (Laravel cast)
+                if (is_array($rawValue)) {
+                    $permissions = array_map('intval', $rawValue);
+                    Log::info("User permissions loaded as array", ['permissions' => $permissions]);
                 } else {
-                    $permissions = [];
-                    Log::warning("Unknown format for permissions", ['akses' => $userRole->akses]);
+                    // Handle string JSON with multiple levels of escaping
+                    $jsonString = $rawValue;
+                    
+                    // Remove outer quotes if present
+                    if (is_string($jsonString) && str_starts_with($jsonString, '"') && str_ends_with($jsonString, '"')) {
+                        $jsonString = substr($jsonString, 1, -1);
+                        // Unescape quotes
+                        $jsonString = str_replace('\\"', '"', $jsonString);
+                    }
+                    
+                    $decoded = json_decode($jsonString, true);
+                    
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $permissions = array_map('intval', $decoded);
+                        Log::info("User permissions loaded from JSON string", [
+                            'raw' => $rawValue,
+                            'processed' => $jsonString,
+                            'decoded' => $permissions
+                        ]);
+                    } else {
+                        // Fallback: try to get raw from database
+                        $rawFromDb = $userRole->getRawOriginal('akses');
+                        $decodedFromRaw = json_decode($rawFromDb, true);
+                        
+                        if (is_array($decodedFromRaw)) {
+                            $permissions = array_map('intval', $decodedFromRaw);
+                            Log::info("User permissions loaded from raw database", [
+                                'raw_db' => $rawFromDb,
+                                'decoded' => $permissions
+                            ]);
+                        } else {
+                            $permissions = [];
+                            Log::warning("Failed to parse permissions", [
+                                'raw_value' => $rawValue,
+                                'raw_db' => $rawFromDb,
+                                'json_error' => json_last_error_msg()
+                            ]);
+                        }
+                    }
                 }
             }
         }
@@ -55,7 +95,6 @@ class DashboardController extends Controller
 
     return [$permissions, $isSuperAdmin];
 }
-
 
     /**
      * Check if user has permission berdasarkan menu dan action
@@ -280,6 +319,36 @@ class DashboardController extends Controller
 
         return response()->json($debugInfo, 200, [], JSON_PRETTY_PRINT);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // ==========================================TABEL======================================
 

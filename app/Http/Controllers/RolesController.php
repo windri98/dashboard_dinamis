@@ -12,9 +12,18 @@ use Illuminate\Http\Request;
 
 class RolesController extends Controller
 {
+    /**
+     * Display all roles with readable permissions
+     */
     public function showrole()
     {
         $roles = Roles::with('users')->get();
+        
+        // Add readable permissions to each role for display
+        foreach ($roles as $role) {
+            $role->readable_permissions = $this->getReadablePermissions($role);
+        }
+        
         return view('dashboard.role.roles', [
             'roles' => $roles,
         ]);
@@ -23,18 +32,15 @@ class RolesController extends Controller
     /**
      * Show form to add new role
      */
-        public function addrole()
+    public function addrole()
     {
         try {
-            // Tambahkan 'action' ke with()
             $permissions = Permission::with(['menu', 'menuItem', 'action'])->get();
-            $actions = Action::all();
-            
             $groupedPermissions = $this->groupPermissionsByMenu($permissions);
+            
             return view('dashboard.role.create', [
                 'permissions' => $permissions,
                 'groupedPermissions' => $groupedPermissions,
-                'actions' => $actions
             ]);
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Error loading create role: ' . $e->getMessage()]);
@@ -57,7 +63,7 @@ class RolesController extends Controller
             
             $role = new Roles();
             $role->role = $request->role;
-            $role->akses = $request->permissions ?? [];
+            $role->akses = json_encode($request->permissions ?? []);
             $role->save();
             
             DB::commit();
@@ -74,14 +80,11 @@ class RolesController extends Controller
     /**
      * Show form to edit role
      */
-        public function editrole($id)
+    public function editrole($id)
     {
         try {
             $role = Roles::findOrFail($id);
-            // Tambahkan 'action' ke with()
             $permissions = Permission::with(['menu', 'menuItem', 'action'])->get();
-            $actions = Action::all();
-            
             $assignedPermissions = $this->decodeRolePermissions($role->akses);
             $groupedPermissions = $this->groupPermissionsByMenu($permissions);
             
@@ -90,14 +93,12 @@ class RolesController extends Controller
                 'permissions' => $permissions,
                 'groupedPermissions' => $groupedPermissions,
                 'assignedPermissions' => $assignedPermissions,
-                'actions' => $actions
             ]);
             
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Error loading edit role: ' . $e->getMessage()]);
         }
     }
-
 
     /**
      * Update role
@@ -137,13 +138,13 @@ class RolesController extends Controller
         try {
             $role = Roles::findOrFail($id);
 
-            // Cegah hapus SuperAdmin
+            // Prevent deleting SuperAdmin
             if (strtolower($role->role) === 'superadmin') {
                 return redirect()->route('show.role')
                     ->with('error', 'Role Super Admin tidak dapat dihapus!');
             }
 
-            // Cek apakah role masih digunakan user
+            // Check if role is still used by users
             if ($role->users()->count() > 0) {
                 return redirect()->route('show.role')
                     ->with('error', 'Role masih digunakan oleh ' . $role->users()->count() . ' user!');
@@ -161,9 +162,9 @@ class RolesController extends Controller
     // ========== HELPER METHODS ==========
 
     /**
-     * Group permissions berdasarkan menu untuk tampilan
+     * Group permissions by menu for display
      */
-        private function groupPermissionsByMenu($permissions)
+    private function groupPermissionsByMenu($permissions)
     {
         $grouped = [];
         
@@ -188,11 +189,9 @@ class RolesController extends Controller
                     ];
                 }
                 
-                // Tambahkan info action name ke permission
                 $permission->action_name = $permission->action->name ?? 'Unknown Action';
                 $grouped[$menuName]['menu_items'][$menuItemName]['permissions'][] = $permission;
             } else {
-                // Permission langsung untuk menu
                 $permission->action_name = $permission->action->name ?? 'Unknown Action';
                 $grouped[$menuName]['menu_permissions'][] = $permission;
             }
@@ -202,28 +201,74 @@ class RolesController extends Controller
     }
 
     /**
-     * Decode role permissions dari JSON
+     * Decode role permissions from JSON with support for "Full access" and fixed parsing
      */
     private function decodeRolePermissions($akses)
     {
-        // Handle full access
-        if ($akses === true || $akses === 'true' || $akses === '1') {
+        // Handle full access string
+        if ($akses === 'Full access' || $akses === 'full access' || $akses === true || $akses === 'true' || $akses === '1') {
             return Permission::pluck('id')->toArray();
         }
         
-        // Handle JSON string
-        if (is_string($akses)) {
-            $decoded = json_decode($akses, true);
-            return is_array($decoded) ? $decoded : [];
+        // Handle array (Laravel cast)
+        if (is_array($akses)) {
+            return array_map('intval', $akses);
         }
         
-        // Handle array
-        if (is_array($akses)) {
-            return $akses;
+        // Handle JSON string with enhanced parsing
+        if (is_string($akses)) {
+            $jsonString = $akses;
+            
+            // Remove outer quotes if present (double-quoted JSON)
+            if (str_starts_with($jsonString, '"') && str_ends_with($jsonString, '"')) {
+                $jsonString = substr($jsonString, 1, -1);
+                // Unescape quotes
+                $jsonString = str_replace('\\"', '"', $jsonString);
+            }
+            
+            $decoded = json_decode($jsonString, true);
+            
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return array_map('intval', $decoded);
+            }
         }
         
         return [];
     }
+
+    /**
+     * Get readable permissions for display with Full access support
+     */
+    private function getReadablePermissions($role)
+    {
+        // Handle full access
+        if ($role->akses === 'Full access' || $role->akses === 'full access') {
+            return collect(['Full Access' => ['All Permissions']]);
+        }
+        
+        $permissionIds = $this->decodeRolePermissions($role->akses);
+        
+        if (empty($permissionIds)) {
+            return collect();
+        }
+        
+        return Permission::with(['menu', 'menuItem', 'action'])
+                        ->whereIn('id', $permissionIds)
+                        ->get()
+                        ->groupBy(function($permission) {
+                            $menuName = $permission->menu->name ?? 'Unknown Menu';
+                            $menuItemName = $permission->menuItem->name ?? null;
+                            
+                            return $menuItemName ? 
+                                $menuName . ' > ' . $menuItemName : 
+                                $menuName;
+                        })
+                        ->map(function($permissions) {
+                            return $permissions->pluck('action.name')->filter();
+                        });
+    }
+
+    // ========== PUBLIC UTILITY METHODS ==========
 
     /**
      * Check if user has specific permission
@@ -236,11 +281,11 @@ class RolesController extends Controller
         }
 
         $rolePermissions = $this->decodeRolePermissions($user->role->akses);
-        return in_array($permissionId, $rolePermissions);
+        return in_array((int)$permissionId, $rolePermissions);
     }
 
     /**
-     * Get user permissions dengan detail
+     * Get user permissions with details
      */
     public function getUserPermissions($userId)
     {
@@ -254,31 +299,5 @@ class RolesController extends Controller
         return Permission::with(['menu', 'menuItem', 'action'])
                         ->whereIn('id', $rolePermissions)
                         ->get();
-    }
-
-    /**
- * Get permissions dalam format readable
- */
-    public function getReadablePermissions($roleId)
-    {
-        $role = Roles::findOrFail($roleId);
-        $permissionIds = $this->decodeRolePermissions($role->akses);
-
-        return Permission::with(['menu', 'menuItem', 'action'])
-                            ->whereIn('id', $permissionIds)
-                            ->get()
-                            ->map(function($permission) {
-                                return [
-                                    'id' => $permission->id,
-                                    'menu' => $permission->menu->name ?? 'Unknown',
-                                    'menu_item' => $permission->menuItem->name ?? null,
-                                    'action' => $permission->action->name ?? 'Unknown',
-                                    'full_name' => sprintf('%s%s - %s', 
-                                        $permission->menu->name ?? 'Unknown',
-                                        $permission->menuItem ? ' > ' . $permission->menuItem->name : '',
-                                        $permission->action->name ?? 'Unknown'
-                                    )
-                                ];
-                            });
     }
 }

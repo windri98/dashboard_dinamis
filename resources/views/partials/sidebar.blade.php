@@ -18,19 +18,44 @@
     $permissionIds = [];
     $debugInfo = [];
 
-    // Ambil permission user dengan support untuk "Full access"
+    // Ambil permission user dengan support untuk "Full access" dan fixed JSON parsing
     if (!$isSuperAdmin && $userRole && !empty($userRole->akses)) {
-        $permissionsRaw = $userRole->akses;
+        $rawValue = $userRole->akses;
 
         // Handle "Full access" string
-        if ($permissionsRaw === 'Full access' || $permissionsRaw === 'full access') {
+        if ($rawValue === 'Full access' || $rawValue === 'full access') {
             $permissionIds = Permission::pluck('id')->toArray();
-        } else if (!is_array($permissionsRaw)) {
-            // fallback jika data berupa string JSON
-            $permissionsRaw = json_decode($userRole->getRawOriginal('akses'), true) ?: [];
-            $permissionIds = is_array($permissionsRaw) ? array_map('intval', $permissionsRaw) : [];
         } else {
-            $permissionIds = is_array($permissionsRaw) ? array_map('intval', $permissionsRaw) : [];
+            // Check if it's already an array (Laravel cast)
+            if (is_array($rawValue)) {
+                $permissionIds = array_map('intval', $rawValue);
+            } else {
+                // Handle string JSON with multiple levels of escaping
+                $jsonString = $rawValue;
+                
+                // Remove outer quotes if present
+                if (is_string($jsonString) && str_starts_with($jsonString, '"') && str_ends_with($jsonString, '"')) {
+                    $jsonString = substr($jsonString, 1, -1);
+                    // Unescape quotes
+                    $jsonString = str_replace('\\"', '"', $jsonString);
+                }
+                
+                $decoded = json_decode($jsonString, true);
+                
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $permissionIds = array_map('intval', $decoded);
+                } else {
+                    // Fallback: try to get raw from database
+                    $rawFromDb = $userRole->getRawOriginal('akses');
+                    $decodedFromRaw = json_decode($rawFromDb, true);
+                    
+                    if (is_array($decodedFromRaw)) {
+                        $permissionIds = array_map('intval', $decodedFromRaw);
+                    } else {
+                        $permissionIds = [];
+                    }
+                }
+            }
         }
         
         $debugInfo['final_permissions'] = $permissionIds;
