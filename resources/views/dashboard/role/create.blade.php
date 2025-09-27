@@ -208,7 +208,7 @@
         selectAllActionButtons.forEach(button => {
             button.addEventListener('change', function() {
                 const actionId = button.getAttribute('data-action');
-                const actionCheckboxes = document.querySelectorAll(`.permission-checkbox[data-action="${actionId}"]`);
+                const actionCheckboxes = document.querySelectorAll(.permission-checkbox[data-action="${actionId}"]);
                 
                 actionCheckboxes.forEach(checkbox => {
                     checkbox.checked = button.checked;
@@ -223,7 +223,7 @@
         selectMenuAllButtons.forEach(button => {
             button.addEventListener('change', function() {
                 const menuId = button.getAttribute('data-menu');
-                const menuCheckboxes = document.querySelectorAll(`.permission-checkbox[data-menu="${menuId}"]`);
+                const menuCheckboxes = document.querySelectorAll(.permission-checkbox[data-menu="${menuId}"]);
                 
                 menuCheckboxes.forEach(checkbox => {
                     checkbox.checked = button.checked;
@@ -238,7 +238,7 @@
         selectItemAllButtons.forEach(button => {
             button.addEventListener('change', function() {
                 const menuItemId = button.getAttribute('data-menu-item');
-                const itemCheckboxes = document.querySelectorAll(`.permission-checkbox[data-menu-item="${menuItemId}"]`);
+                const itemCheckboxes = document.querySelectorAll(.permission-checkbox[data-menu-item="${menuItemId}"]);
                 
                 itemCheckboxes.forEach(checkbox => {
                     checkbox.checked = button.checked;
@@ -261,8 +261,8 @@
         
         // Update status "select all" untuk action tertentu
         function updateSelectAllStatusForAction(actionId) {
-            const actionCheckboxes = document.querySelectorAll(`.permission-checkbox[data-action="${actionId}"]`);
-            const selectAllActionCheckbox = document.getElementById(`select_all_action_${actionId}`);
+            const actionCheckboxes = document.querySelectorAll(.permission-checkbox[data-action="${actionId}"]);
+            const selectAllActionCheckbox = document.getElementById(select_all_action_${actionId});
             
             let allChecked = true;
             actionCheckboxes.forEach(checkbox => {
@@ -280,8 +280,8 @@
         function updateSelectAllStatusForMenu(menuId) {
             if (!menuId) return;
             
-            const menuCheckboxes = document.querySelectorAll(`.permission-checkbox[data-menu="${menuId}"]`);
-            const selectMenuAllCheckbox = document.querySelector(`.select-menu-all[data-menu="${menuId}"]`);
+            const menuCheckboxes = document.querySelectorAll(.permission-checkbox[data-menu="${menuId}"]);
+            const selectMenuAllCheckbox = document.querySelector(.select-menu-all[data-menu="${menuId}"]);
             
             let allChecked = true;
             menuCheckboxes.forEach(checkbox => {
@@ -299,8 +299,8 @@
         function updateSelectAllStatusForMenuItem(menuItemId) {
             if (!menuItemId) return;
             
-            const itemCheckboxes = document.querySelectorAll(`.permission-checkbox[data-menu-item="${menuItemId}"]`);
-            const selectItemAllCheckbox = document.querySelector(`.select-item-all[data-menu-item="${menuItemId}"]`);
+            const itemCheckboxes = document.querySelectorAll(.permission-checkbox[data-menu-item="${menuItemId}"]);
+            const selectItemAllCheckbox = document.querySelector(.select-item-all[data-menu-item="${menuItemId}"]);
             
             let allChecked = true;
             itemCheckboxes.forEach(checkbox => {
