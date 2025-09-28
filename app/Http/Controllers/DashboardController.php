@@ -18,20 +18,19 @@ class DashboardController extends Controller
      */
     private function getUserPermissions()
     {
-        $userRoleId = auth()->user()->role_id;
-        $isSuperAdmin = $userRoleId == 1;
+        $userRolesId = auth()->user()->role_id;
+        $isSuperAdmin = $userRolesId == 1;
 
         $permissions = [];
 
         if ($isSuperAdmin) {
-            Log::info("SuperAdmin detected, full access granted", ['role_id' => $userRoleId]);
+            Log::info("SuperAdmin detected, full access granted", ['role_id' => $userRolesId]);
         } else {
-            $userRole = Roles::find($userRoleId);
-
+            $userRole = Roles::find($userRolesId);
             if (!$userRole) {
-                Log::warning("Role not found for user", ['user_id' => auth()->id(), 'role_id' => $userRoleId]);
+                Log::warning("Role not found for user", ['user_id' => auth()->id(), 'role_id' => $userRolesId]);
             } elseif (empty($userRole->akses)) {
-                Log::info("No permissions set for this role", ['role_id' => $userRoleId]);
+                Log::info("No permissions set for this role", ['role_id' => $userRolesId]);
             } else {
                 // FIXED: Handle "Full access"
                 if ($userRole->akses === 'Full access' || $userRole->akses === 'full access') {
@@ -63,7 +62,7 @@ class DashboardController extends Controller
                             Log::info("User permissions loaded from JSON string", [
                                 'raw' => $rawValue,
                                 'processed' => $jsonString,
-                                'decoded' => $permissions
+                                'decoded'   => $permissions
                             ]);
                         } else {
                             // Fallback: try to get raw from database
@@ -73,14 +72,14 @@ class DashboardController extends Controller
                             if (is_array($decodedFromRaw)) {
                                 $permissions = array_map('intval', $decodedFromRaw);
                                 Log::info("User permissions loaded from raw database", [
-                                    'raw_db' => $rawFromDb,
+                                    'raw_db'  => $rawFromDb,
                                     'decoded' => $permissions
                                 ]);
                             } else {
                                 $permissions = [];
                                 Log::warning("Failed to parse permissions", [
-                                    'raw_value' => $rawValue,
-                                    'raw_db' => $rawFromDb,
+                                    'raw_value'  => $rawValue,
+                                    'raw_db'     => $rawFromDb,
                                     'json_error' => json_last_error_msg()
                                 ]);
                             }
@@ -115,7 +114,7 @@ class DashboardController extends Controller
             
         if (!$permission) {
             Log::warning("Permission not found in database", [
-                'menu_key' => $menuKey,
+                'menu_key'   => $menuKey,
                 'action_key' => $actionKey
             ]);
             return false;
@@ -123,14 +122,61 @@ class DashboardController extends Controller
         
         $hasAccess = in_array($permission->id, $permissionIds);
         Log::info("Permission check result", [
-            'menu' => $menuKey,
-            'action' => $actionKey,
-            'permission_id' => $permission->id,
+            'menu'             => $menuKey,
+            'action'           => $actionKey,
+            'permission_id'    => $permission->id,
             'user_permissions' => $permissionIds,
-            'has_access' => $hasAccess
+            'has_access'       => $hasAccess
         ]);
         
         return $hasAccess;
+    }
+
+    /**
+     * FIXED: Get table permission key from dynamic table
+     */
+    private function getTablePermissionKey($tableId)
+    {
+        $dynamicTable = DynamicTable::find($tableId);
+        
+        if (!$dynamicTable) {
+            Log::warning("Dynamic table not found", ['table_id' => $tableId]);
+            return 'master_data'; // fallback
+        }
+
+        // FIXED: Cari permission key dari tabel
+        $permissionKey = $dynamicTable->permission_key ?? 'master_data';
+        
+        Log::info("Table permission key resolved", [
+            'table_id'       => $tableId,
+            'table_name'     => $dynamicTable->table_name,
+            'permission_key' => $permissionKey
+        ]);
+        
+        return $permissionKey;
+    }
+
+    /**
+     * FIXED: Get all action permissions for a table
+     */
+    private function getTablePermissions($permissionKey)
+    {
+        [$permissionIds, $isSuperAdmin] = $this->getUserPermissions();
+        
+        $permissions = [
+            'create' => $isSuperAdmin || $this->hasPermission($permissionKey, 'Create/Tambah'),
+            'read' => $isSuperAdmin || $this->hasPermission($permissionKey, 'View/Lihat'),
+            'update' => $isSuperAdmin || $this->hasPermission($permissionKey, 'Edit/Update'),
+            'delete' => $isSuperAdmin || $this->hasPermission($permissionKey, 'Delete/Hapus'),
+        ];
+
+        Log::info("Table permissions calculated", [
+            'permission_key' => $permissionKey,
+            'permissions'    => $permissions,
+            'is_super_admin' => $isSuperAdmin
+        ]);
+
+        return $permissions;
     }
 
     /**
@@ -149,6 +195,7 @@ class DashboardController extends Controller
             $q->where('permission_key', $menuPermissionKey);
         })->pluck('id')->toArray();
         
+        
         if (empty($menuPermissions)) {
             Log::warning("No permissions found for menu", ['menu_key' => $menuPermissionKey]);
             return false;
@@ -158,11 +205,11 @@ class DashboardController extends Controller
         $hasAccess = !empty(array_intersect($menuPermissions, $permissionIds));
         
         Log::info("Menu permission check result", [
-            'menu' => $menuPermissionKey,
+            'menu'             => $menuPermissionKey,
             'menu_permissions' => $menuPermissions,
             'user_permissions' => $permissionIds,
-            'intersection' => array_intersect($menuPermissions, $permissionIds),
-            'has_access' => $hasAccess
+            'intersection'     => array_intersect($menuPermissions, $permissionIds),
+            'has_access'       => $hasAccess
         ]);
         
         return $hasAccess;
@@ -180,8 +227,8 @@ class DashboardController extends Controller
                 
                 $view->with([
                     'userPermissions' => $permissions,
-                    'isSuperAdmin' => $isSuperAdmin,
-                    'userRoleId' => auth()->user()->role_id
+                    'isSuperAdmin'    => $isSuperAdmin,
+                    'userRoleId'      => auth()->user()->role_id
                 ]);
             }
         });
@@ -196,11 +243,11 @@ class DashboardController extends Controller
             [$permissions, $isSuperAdmin] = $this->getUserPermissions();
             
             Log::info("Dashboard access", [
-                'user_id' => auth()->id(),
-                'role_id' => auth()->user()->role_id,
-                'is_super_admin' => $isSuperAdmin,
+                'user_id'           => auth()->id(),
+                'role_id'           => auth()->user()->role_id,
+                'is_super_admin'    => $isSuperAdmin,
                 'permissions_count' => count($permissions),
-                'permissions' => $permissions
+                'permissions'       => $permissions
             ]);
             
             // Fetch active dynamic menus with permission filtering
@@ -213,9 +260,10 @@ class DashboardController extends Controller
                     
                     $hasAccess = $this->hasMenuPermission($menu->permission_key);
                     Log::info("Menu filter result", [
-                        'menu_name' => $menu->name,
+                        'menu_name'      => $menu->name,
+                        'menu_item_name' => $menu->name,
                         'permission_key' => $menu->permission_key,
-                        'has_access' => $hasAccess
+                        'has_access'     => $hasAccess
                     ]);
                     
                     return $hasAccess;
@@ -230,13 +278,13 @@ class DashboardController extends Controller
                     return $menu->activeItems->count(); 
                 }),
                 'total_tables' => DynamicTable::active()->count(),
-                'total_users' => User::count(),
+                'total_users'  => User::count(),
             ];
 
             return view('dashboard.index', [
                 'dynamicMenus' => $dynamicMenus,
-                'stats' => $stats,
-                'permissions' => $permissions,
+                'stats'        => $stats,
+                'permissions'  => $permissions,
                 'isSuperAdmin' => $isSuperAdmin
             ]);
             
@@ -245,10 +293,10 @@ class DashboardController extends Controller
             return view('dashboard.index', [
                 'dynamicMenus' => collect(),
                 'stats' => [
-                    'total_menus' => 0,
-                    'total_items' => 0,
+                    'total_menus'  => 0,
+                    'total_items'  => 0,
                     'total_tables' => 0,
-                    'total_users' => 0,
+                    'total_users'  => 0,
                 ]
             ])->with('error', 'Terjadi kesalahan saat memuat dashboard');
         }
@@ -282,7 +330,7 @@ class DashboardController extends Controller
 
         // Get role info
         if ($user->role_id) {
-            $role = Roles::find($user->role_id);
+            $role = Roles::find($user->role_id); // FIXED: Role bukan Roles
             if ($role) {
                 $debugInfo['role_info'] = [
                     'id' => $role->id,
@@ -334,62 +382,20 @@ class DashboardController extends Controller
         return response()->json($debugInfo, 200, [], JSON_PRETTY_PRINT);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
     // ======================================== TABLE METHODS ========================================
 
     public function showTable(Request $request, $tableId)
     {
-        if (!$this->hasPermission('master_data', 'View/Lihat')) {
+        // FIXED: Dynamic permission key based on table
+        $permissionKey = $this->getTablePermissionKey($tableId);
+        
+        // FIXED: Check read permission specifically
+        if (!$this->hasPermission($permissionKey, 'View/Lihat')) {
+            Log::warning("Table access denied", [
+                'table_id' => $tableId,
+                'permission_key' => $permissionKey,
+                'user_id' => auth()->id()
+            ]);
             abort(403, 'Anda tidak memiliki permission untuk mengakses tabel ini');
         }
 
@@ -400,6 +406,8 @@ class DashboardController extends Controller
                 ->with('error', 'Tabel database tidak ditemukan');
         }
 
+        // FIXED: Get all table permissions
+        $tablePermissions = $this->getTablePermissions($permissionKey);
         [$permissions, $isSuperAdmin] = $this->getUserPermissions();
 
         $query = DB::table($dynamicTable->table_name);      
@@ -455,17 +463,29 @@ class DashboardController extends Controller
         $perPage = $request->get('per_page', 15);
         $data = $query->paginate($perPage);
 
+        Log::info("Table data loaded successfully", [
+            'table_id' => $tableId,
+            'permission_key' => $permissionKey,
+            'table_permissions' => $tablePermissions,
+            'data_count' => $data->count(),
+            'total_records' => $data->total()
+        ]);
+
         return view('dashboard.table', [
             'dynamicTable' => $dynamicTable,
             'data' => $data,
             'permissions' => $permissions,
-            'isSuperAdmin' => $isSuperAdmin
+            'isSuperAdmin' => $isSuperAdmin,
+            'tablePermissions' => $tablePermissions, // FIXED: Pass table permissions
+            'permissionKey' => $permissionKey // FIXED: Pass permission key
         ]);
     }
 
     public function storeTableData(Request $request, $tableId)
     {
-        if (!$this->hasPermission('master_data', 'Create/Tambah')) {
+        $permissionKey = $this->getTablePermissionKey($tableId);
+        
+        if (!$this->hasPermission($permissionKey, 'Create/Tambah')) {
             return back()->with('error', 'Anda tidak memiliki permission untuk menambah data');
         }
 
@@ -498,7 +518,9 @@ class DashboardController extends Controller
         Log::info("Update called - Table: {$table}, ID: {$id}");
         Log::info("Request data: " . json_encode($request->all()));
         
-        if (!$this->hasPermission('master_data', 'Edit/Update')) {
+        $permissionKey = $this->getTablePermissionKey($table);
+        
+        if (!$this->hasPermission($permissionKey, 'Edit/Update')) {
             return back()->with('error', 'Anda tidak memiliki permission untuk mengedit data');
         }
 
@@ -550,7 +572,9 @@ class DashboardController extends Controller
     
     public function destroyTableData($tableId, $id)
     {
-        if (!$this->hasPermission('master_data', 'Delete/Hapus')) {
+        $permissionKey = $this->getTablePermissionKey($tableId);
+        
+        if (!$this->hasPermission($permissionKey, 'Delete/Hapus')) {
             return back()->with('error', 'Anda tidak memiliki permission untuk menghapus data');
         }
 

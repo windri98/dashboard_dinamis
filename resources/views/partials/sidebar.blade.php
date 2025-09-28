@@ -8,12 +8,13 @@
     use App\Models\Roles;
     use App\Models\Permission;
     use App\Models\DynamicMenu;
+    use App\Models\DynamicMenuItem;
 
     // FIXED: Gunakan data yang sudah di-share dari controller
     $userRoleId = $userRoleId ?? auth()->user()->role_id;
     $isSuperAdmin = $isSuperAdmin ?? ($userRoleId == 1);
     $permissionIds = $userPermissions ?? [];
-
+    
     // Debug log untuk troubleshooting
     \Log::info("Sidebar permissions debug", [
         'user_id' => auth()->id(),
