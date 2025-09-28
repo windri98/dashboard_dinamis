@@ -63,7 +63,7 @@
                                         <td colspan="{{ count($actions) + 2 }}">
                                             <strong class="menu-title">{{ $menuName }}</strong>
                                         </td>
-                                    </tr>ddd
+                                    </tr>
                                     
                                     {{-- Menu-level permissions (jika ada) --}}
                                     @if(count($menuData['menu_permissions']) > 0)

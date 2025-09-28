@@ -9,62 +9,68 @@
     use App\Models\Permission;
     use App\Models\DynamicMenu;
 
-    // Ambil data user
-    $userRoleId = auth()->user()->role_id;
-    $isSuperAdmin = $userRoleId == 1;
-    $userRole = Roles::find($userRoleId);
+    // FIXED: Gunakan data yang sudah di-share dari controller
+    $userRoleId = $userRoleId ?? auth()->user()->role_id;
+    $isSuperAdmin = $isSuperAdmin ?? ($userRoleId == 1);
+    $permissionIds = $userPermissions ?? [];
 
-    // Debug info
-    $permissionIds = [];
-    $debugInfo = [];
+    // Debug log untuk troubleshooting
+    \Log::info("Sidebar permissions debug", [
+        'user_id' => auth()->id(),
+        'role_id' => $userRoleId,
+        'is_super_admin' => $isSuperAdmin,
+        'permission_ids' => $permissionIds,
+        'permission_count' => count($permissionIds)
+    ]);
 
-    // Ambil permission user dengan support untuk "Full access" dan fixed JSON parsing
-    if (!$isSuperAdmin && $userRole && !empty($userRole->akses)) {
-        $rawValue = $userRole->akses;
+    // FIXED: Fallback jika data belum di-share (untuk backward compatibility)
+    if (empty($permissionIds) && !$isSuperAdmin) {
+        $userRole = Roles::find($userRoleId);
+        
+        if ($userRole && !empty($userRole->akses)) {
+            $rawValue = $userRole->akses;
 
-        // Handle "Full access" string
-        if ($rawValue === 'Full access' || $rawValue === 'full access') {
-            $permissionIds = Permission::pluck('id')->toArray();
-        } else {
-            // Check if it's already an array (Laravel cast)
-            if (is_array($rawValue)) {
-                $permissionIds = array_map('intval', $rawValue);
+            // Handle "Full access" string
+            if ($rawValue === 'Full access' || $rawValue === 'full access') {
+                $permissionIds = Permission::pluck('id')->toArray();
             } else {
-                // Handle string JSON with multiple levels of escaping
-                $jsonString = $rawValue;
-                
-                // Remove outer quotes if present
-                if (is_string($jsonString) && str_starts_with($jsonString, '"') && str_ends_with($jsonString, '"')) {
-                    $jsonString = substr($jsonString, 1, -1);
-                    // Unescape quotes
-                    $jsonString = str_replace('\\"', '"', $jsonString);
-                }
-                
-                $decoded = json_decode($jsonString, true);
-                
-                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    $permissionIds = array_map('intval', $decoded);
+                // Check if it's already an array (Laravel cast)
+                if (is_array($rawValue)) {
+                    $permissionIds = array_map('intval', $rawValue);
                 } else {
-                    // Fallback: try to get raw from database
-                    $rawFromDb = $userRole->getRawOriginal('akses');
-                    $decodedFromRaw = json_decode($rawFromDb, true);
+                    // Handle string JSON with multiple levels of escaping
+                    $jsonString = $rawValue;
                     
-                    if (is_array($decodedFromRaw)) {
-                        $permissionIds = array_map('intval', $decodedFromRaw);
+                    // Remove outer quotes if present
+                    if (is_string($jsonString) && str_starts_with($jsonString, '"') && str_ends_with($jsonString, '"')) {
+                        $jsonString = substr($jsonString, 1, -1);
+                        // Unescape quotes
+                        $jsonString = str_replace('\\"', '"', $jsonString);
+                    }
+                    
+                    $decoded = json_decode($jsonString, true);
+                    
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $permissionIds = array_map('intval', $decoded);
                     } else {
-                        $permissionIds = [];
+                        // Fallback: try to get raw from database
+                        $rawFromDb = $userRole->getRawOriginal('akses');
+                        $decodedFromRaw = json_decode($rawFromDb, true);
+                        
+                        if (is_array($decodedFromRaw)) {
+                            $permissionIds = array_map('intval', $decodedFromRaw);
+                        } else {
+                            $permissionIds = [];
+                        }
                     }
                 }
             }
         }
-        
-        $debugInfo['final_permissions'] = $permissionIds;
     }
 
-    // Fungsi cek permission action
-    function hasPermission($menuKey, $actionKey, $permissionIds, $isSuperAdmin, &$debugInfo = null) {
+    // FIXED: Fungsi cek permission action yang konsisten dengan controller
+    function hasPermission($menuKey, $actionKey, $permissionIds, $isSuperAdmin) {
         if ($isSuperAdmin) {
-            if ($debugInfo) $debugInfo['checks'][] = ['menu'=>$menuKey,'action'=>$actionKey,'result'=>'superadmin_granted'];
             return true;
         }
 
@@ -73,27 +79,29 @@
             ->first();
 
         if (!$permission) {
-            if ($debugInfo) $debugInfo['checks'][] = ['menu'=>$menuKey,'action'=>$actionKey,'result'=>'permission_not_found'];
+            \Log::warning("Permission not found in sidebar", [
+                'menu_key' => $menuKey,
+                'action_key' => $actionKey
+            ]);
             return false;
         }
 
         $hasAccess = in_array((int)$permission->id, $permissionIds);
-        if ($debugInfo) {
-            $debugInfo['checks'][] = [
-                'menu'=>$menuKey,
-                'action'=>$actionKey,
-                'permission_id'=>$permission->id,
-                'user_permissions'=>$permissionIds,
-                'result'=>$hasAccess?'granted':'denied'
-            ];
-        }
+        
+        \Log::info("Sidebar permission check", [
+            'menu' => $menuKey,
+            'action' => $actionKey,
+            'permission_id' => $permission->id,
+            'user_permissions' => $permissionIds,
+            'has_access' => $hasAccess
+        ]);
+        
         return $hasAccess;
     }
 
-    // Fungsi cek menu access
-    function hasMenuAccess($menuKey, $permissionIds, $isSuperAdmin, &$debugInfo = null) {
+    // FIXED: Fungsi cek menu access yang konsisten dengan controller
+    function hasMenuAccess($menuKey, $permissionIds, $isSuperAdmin) {
         if ($isSuperAdmin) {
-            if ($debugInfo) $debugInfo['menu_checks'][] = ['menu'=>$menuKey,'result'=>'superadmin_granted'];
             return true;
         }
 
@@ -101,34 +109,32 @@
         $intersection = array_intersect($menuPermissions, $permissionIds);
         $hasAccess = !empty($intersection);
 
-        if ($debugInfo) {
-            $debugInfo['menu_checks'][] = [
-                'menu'=>$menuKey,
-                'menu_permissions'=>$menuPermissions,
-                'user_permissions'=>$permissionIds,
-                'intersection'=>$intersection,
-                'result'=>$hasAccess?'granted':'denied'
-            ];
-        }
+        \Log::info("Sidebar menu access check", [
+            'menu' => $menuKey,
+            'menu_permissions' => $menuPermissions,
+            'user_permissions' => $permissionIds,
+            'intersection' => $intersection,
+            'has_access' => $hasAccess
+        ]);
 
         return $hasAccess;
     }
 
-    // Load dynamic menus
+    // Load dynamic menus dengan filtering yang benar
     $dynamicMainMenus = DynamicMenu::active()->byCategory('main')->ordered()->with('activeItems')->get()
-        ->filter(fn($menu) => hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin, $debugInfo));
+        ->filter(fn($menu) => hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin));
 
     $dynamicSettingsMenus = DynamicMenu::active()->byCategory('settings')->ordered()->with('activeItems')->get()
-        ->filter(fn($menu) => hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin, $debugInfo));
+        ->filter(fn($menu) => hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin));
 
-    $debugInfo['final_results'] = [
-        'main_menus_count'=>$dynamicMainMenus->count(),
-        'settings_menus_count'=>$dynamicSettingsMenus->count(),
-        'user_role_id'=>$userRoleId,
-        'is_super_admin'=>$isSuperAdmin
-    ];
-
-    // Production ready - debug removed for production use
+    // Debug log hasil akhir
+    \Log::info("Sidebar final results", [
+        'main_menus_count' => $dynamicMainMenus->count(),
+        'settings_menus_count' => $dynamicSettingsMenus->count(),
+        'user_role_id' => $userRoleId,
+        'is_super_admin' => $isSuperAdmin,
+        'total_permissions' => count($permissionIds)
+    ]);
 @endphp
 
 <aside class="sidebar">
