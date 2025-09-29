@@ -82,7 +82,6 @@ class RolesController extends Controller
             // Tambahkan 'action' ke with()
             $permissions = Permission::with(['menu', 'menuItem', 'action'])->get();
             $actions = Action::all();
-            
             $assignedPermissions = $this->decodeRolePermissions($role->akses);
             $groupedPermissions = $this->groupPermissionsByMenu($permissions);
             

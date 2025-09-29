@@ -36,7 +36,7 @@
     @endif
 
     <div class="container-create">
-        <form action="{{ route('create.user') }}" method="POST" class="form-container">
+        <form action="{{ route('settings.users.store') }}" method="POST" class="form-container">
             @csrf   
             <div class="form-group">
                 <label for="nama" class="form-label">Nama:</label>

@@ -30,7 +30,7 @@
     @endif
 
     <div class="container-create">
-        <form action="{{ route('settings.roles.edit', $role->id) }}" method="POST" class="form-container">
+        <form action="{{ route('settings.roles.update', $role->id) }}" method="POST" class="form-container">
             @csrf
             @method('PUT')
 
