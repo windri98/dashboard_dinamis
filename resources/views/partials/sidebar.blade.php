@@ -296,7 +296,7 @@
             <div class="dropdown-content">
                 @if($hasRoleAccess)
                 <div class="sub-menu-item">
-                    <a href="/showrole">
+                    <a href="{{ route('settings.roles.index') }}">
                         <i class="fas fa-user-cog"></i>
                         <span class="menu-text">Role</span>
                     </a>
@@ -305,7 +305,7 @@
 
                 @if($hasUserAccess)
                 <div class="sub-menu-item">
-                    <a href="/showuser">
+                    <a href="{{ route('settings.users.index') }}">
                         <i class="fa fa-users" aria-hidden="true"></i>
                         <span class="menu-text">User</span>
                     </a>

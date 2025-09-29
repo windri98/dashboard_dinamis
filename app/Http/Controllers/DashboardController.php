@@ -239,6 +239,7 @@ class DashboardController extends Controller
      */
     public function index()
     {
+        
         try {
             [$permissions, $isSuperAdmin] = $this->getUserPermissions();
             
