@@ -8,7 +8,6 @@
     use App\Models\Roles;
     use App\Models\Permission;
     use App\Models\DynamicMenu;
-    use App\Models\DynamicMenuItem;
 
     // FIXED: Gunakan data yang sudah di-share dari controller
     $userRoleId = $userRoleId ?? auth()->user()->role_id;
@@ -106,7 +105,10 @@
             return true;
         }
 
-        $menuPermissions = Permission::whereHas('menu', fn($q) => $q->where('permission_key', $menuKey))->pluck('id')->toArray();
+        $menuPermissions = Permission::whereHas('menu', fn($q) => $q->where('permission_key', $menuKey))
+            ->pluck('id')
+            ->toArray();
+        
         $intersection = array_intersect($menuPermissions, $permissionIds);
         $hasAccess = !empty($intersection);
 
@@ -115,6 +117,40 @@
             'menu_permissions' => $menuPermissions,
             'user_permissions' => $permissionIds,
             'intersection' => $intersection,
+            'has_access' => $hasAccess
+        ]);
+
+        return $hasAccess;
+    }
+
+    // NEW: Fungsi cek menu item access berdasarkan menu_item_id
+    function hasMenuItemAccess($menuItemId, $permissionIds, $isSuperAdmin) {
+        if ($isSuperAdmin) {
+            return true;
+        }
+
+        // Cek permission yang spesifik untuk menu_item ini dengan action View/Lihat
+        $itemPermissions = Permission::where('menu_item_id', $menuItemId)
+            ->whereHas('action', fn($q) => $q->where('nama', 'View/Lihat'))
+            ->pluck('id')
+            ->toArray();
+        
+        if (empty($itemPermissions)) {
+            // Fallback: jika tidak ada permission spesifik untuk menu_item, 
+            // berarti menu item ini accessible untuk semua yang bisa akses parent menu
+            \Log::info("No specific permission for menu item, allowing access", [
+                'menu_item_id' => $menuItemId
+            ]);
+            return true;
+        }
+
+        $hasAccess = !empty(array_intersect($itemPermissions, $permissionIds));
+        
+        \Log::info("Menu item access check", [
+            'menu_item_id' => $menuItemId,
+            'item_permissions' => $itemPermissions,
+            'user_permissions' => $permissionIds,
+            'intersection' => array_intersect($itemPermissions, $permissionIds),
             'has_access' => $hasAccess
         ]);
 
@@ -165,11 +201,30 @@
                 <div class="dropdown-content">
                     @forelse($menu->activeItems as $item)
                         @php
-                            // Check individual menu item permission
+                            // FIXED: Check menu item permission dengan prioritas bertingkat
                             $hasItemAccess = $isSuperAdmin;
-                            if (!$hasItemAccess && $item->permission_key) {
-                                $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
+                            
+                            if (!$hasItemAccess) {
+                                // Prioritas 1: Cek permission spesifik untuk menu_item_id
+                                $hasItemAccess = hasMenuItemAccess($item->id, $permissionIds, $isSuperAdmin);
+                                
+                                // Prioritas 2: Fallback ke permission_key menu item jika ada
+                                if (!$hasItemAccess && $item->permission_key) {
+                                    $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
+                                }
+                                
+                                // Prioritas 3: Fallback ke parent menu permission
+                                if (!$hasItemAccess) {
+                                    $hasItemAccess = hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin);
+                                }
                             }
+
+                            \Log::info("Menu item final access decision", [
+                                'menu_name' => $menu->name,
+                                'item_name' => $item->name,
+                                'item_id' => $item->id,
+                                'has_access' => $hasItemAccess
+                            ]);
                         @endphp
                         
                         @if($hasItemAccess)
@@ -251,9 +306,22 @@
                 <div class="dropdown-content">
                     @forelse($menu->activeItems as $item)
                         @php
+                            // FIXED: Check menu item permission dengan prioritas bertingkat
                             $hasItemAccess = $isSuperAdmin;
-                            if (!$hasItemAccess && $item->permission_key) {
-                                $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
+                            
+                            if (!$hasItemAccess) {
+                                // Prioritas 1: Cek permission spesifik untuk menu_item_id
+                                $hasItemAccess = hasMenuItemAccess($item->id, $permissionIds, $isSuperAdmin);
+                                
+                                // Prioritas 2: Fallback ke permission_key menu item jika ada
+                                if (!$hasItemAccess && $item->permission_key) {
+                                    $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
+                                }
+                                
+                                // Prioritas 3: Fallback ke parent menu permission
+                                if (!$hasItemAccess) {
+                                    $hasItemAccess = hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin);
+                                }
                             }
                         @endphp
                         

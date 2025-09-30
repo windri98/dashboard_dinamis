@@ -53,7 +53,7 @@ class DynamicMenuController extends Controller
 
             // Auto-sync semua permissions untuk menu baru (recommended approach)
             $this->syncMenuPermissions($menu);
-
+            
             DB::commit();
             
             return redirect()->route('settings.dynamic-menus.index')
@@ -308,7 +308,7 @@ class DynamicMenuController extends Controller
      * Sync permissions untuk menu utama
      * Membuat permissions berdasarkan actions yang tersedia
      */
-        private function syncMenuPermissions(DynamicMenu $menu)
+    private function syncMenuPermissions(DynamicMenu $menu)
     {
         $actions = Action::all();
         
@@ -331,34 +331,26 @@ class DynamicMenuController extends Controller
 
     /**
      * Sync permissions untuk menu item
-     * Membuat permissions berdasarkan actions yang tersedia
+     * Update existing permissions (menu_item_id = NULL) atau create baru jika belum ada
      */
-        private function syncMenuItemPermissions(DynamicMenuItem $menuItem)
+    private function syncMenuItemPermissions(DynamicMenuItem $menuItem)
     {
         $actions = Action::all();
 
         foreach ($actions as $action) {
-            // Pastikan menu utama (tanpa menu_item_id) selalu punya permission
-            $menuPermission = Permission::where('menu_id', $menuItem->dynamic_menu_id)
+            // Cari permission yang sudah ada dengan menu_item_id = NULL
+            $existingPermission = Permission::where('menu_id', $menuItem->dynamic_menu_id)
                 ->whereNull('menu_item_id')
                 ->where('action_id', $action->id)
                 ->first();
 
-            if (!$menuPermission) {
-                Permission::create([
-                    'menu_id' => $menuItem->dynamic_menu_id,
-                    'menu_item_id' => null,
-                    'action_id' => $action->id,
+            if ($existingPermission) {
+                // UPDATE: Isi menu_item_id yang tadinya NULL
+                $existingPermission->update([
+                    'menu_item_id' => $menuItem->id
                 ]);
-            }
-
-            // Pastikan menu item juga punya permission sendiri
-            $menuItemPermission = Permission::where('menu_id', $menuItem->dynamic_menu_id)
-                ->where('menu_item_id', $menuItem->id)
-                ->where('action_id', $action->id)
-                ->first();
-
-            if (!$menuItemPermission) {
+            } else {
+                // CREATE: Kalau memang belum ada sama sekali
                 Permission::create([
                     'menu_id' => $menuItem->dynamic_menu_id,
                     'menu_item_id' => $menuItem->id,
@@ -367,7 +359,6 @@ class DynamicMenuController extends Controller
             }
         }
     }
-
 
     // ==========================================================================================
     // Maintenance & Utility Methods

@@ -252,24 +252,21 @@ class DashboardController extends Controller
             ]);
             
             // Fetch active dynamic menus with permission filtering
-            $dynamicMenus = DynamicMenu::active()
-                ->ordered()
-                ->with('activeItems')
-                ->get()
-                ->filter(function($menu) use ($isSuperAdmin) {
-                    if ($isSuperAdmin) return true;
-                    
-                    $hasAccess = $this->hasMenuPermission($menu->permission_key);
-                    Log::info("Menu filter result", [
-                        'menu_name'      => $menu->name,
-                        'menu_item_name' => $menu->name,
-                        'permission_key' => $menu->permission_key,
-                        'has_access'     => $hasAccess
-                    ]);
-                    
-                    return $hasAccess;
-                });
-
+            $dynamicMenus = DynamicMenu::active()->ordered()->with('activeItems')->get()
+            ->filter(function($menu) use ($isSuperAdmin) {
+                if ($isSuperAdmin) return true;
+                
+                $hasAccess = $this->hasMenuPermission($menu->permission_key);
+                Log::info("Menu filter result", [
+                    'menu_name'      => $menu->name,
+                    'menu_item_name' => $menu->name,
+                    'permission_key' => $menu->permission_key,
+                    'has_access'     => $hasAccess
+                ]);
+                
+                return $hasAccess;
+            });
+ 
             Log::info("Filtered menus count", ['total' => $dynamicMenus->count()]);
 
             // Get dashboard statistics
@@ -383,6 +380,7 @@ class DashboardController extends Controller
         return response()->json($debugInfo, 200, [], JSON_PRETTY_PRINT);
     }
 
+    
     // ======================================== TABLE METHODS ========================================
 
     public function showTable(Request $request, $tableId)
