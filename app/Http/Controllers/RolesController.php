@@ -46,31 +46,31 @@ class RolesController extends Controller
      * Store a newly created role
      */
     public function store(Request $request)
-    {
-        $request->validate([
-            'role' => 'required|string|max:255|unique:roles,role',
-            'permissions' => 'array',
-            'permissions.*' => 'exists:permissions,id'
-        ]);
+{
+    $request->validate([
+        'role' => 'required|string|max:255|unique:roles,role',
+        'permissions' => 'array',
+        'permissions.*' => 'exists:permissions,id'
+    ]);
+    
+    try {
+        DB::beginTransaction();
         
-        try {
-            DB::beginTransaction();
+        $role = new Roles();
+        $role->role = $request->role;
+        $role->akses = json_encode($request->permissions ?? []);
+        $role->save();
+        
+        DB::commit();
+        
+        return redirect()->route('settings.roles.index')
+            ->with('success', 'Role berhasil dibuat!');
             
-            $role = new Roles();
-            $role->role = $request->role;
-            $role->akses = $request->permissions ?? [];
-            $role->save();
-            
-            DB::commit();
-            
-            return redirect()->route('settings.roles.index')
-                ->with('success', 'Role berhasil dibuat!');
-                
-        } catch (\Exception $e) {
-            DB::rollback();
-            return back()->withErrors(['error' => 'Gagal membuat role: ' . $e->getMessage()]);
-        }
+    } catch (\Exception $e) {
+        DB::rollback();
+        return back()->withErrors(['error' => 'Gagal membuat role: ' . $e->getMessage()]);
     }
+}
 
     /**
      * Show form to edit role
@@ -157,35 +157,6 @@ class RolesController extends Controller
             return back()->withErrors(['error' => 'Error deleting role: ' . $e->getMessage()]);
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     // ========== HELPER METHODS ==========
 
