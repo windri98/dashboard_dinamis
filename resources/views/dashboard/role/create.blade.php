@@ -5,7 +5,7 @@
 <section class="roles-section" id="create-roles">
     <div class="roles-header">
         <h1>Tambah Role</h1>
-        <a href="/showrole" class="back-button">
+        <a href="{{ route('settings.roles.index') }}" class="back-button">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
@@ -30,7 +30,7 @@
     @endif
 
     <div class="container-create">
-        <form action="{{ route('create.role') }}" method="POST" class="form-container">
+        <form action="{{ route('settings.roles.store') }}" method="POST" class="form-container">
             @csrf
             {{-- Input Role --}}
             <div class="form-group">

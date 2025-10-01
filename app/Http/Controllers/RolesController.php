@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 
 class RolesController extends Controller
 {
-    public function showrole()
+    public function index()
     {
         $roles = Roles::with('users')->get();
         return view('dashboard.role.roles', [
@@ -23,7 +23,7 @@ class RolesController extends Controller
     /**
      * Show form to add new role
      */
-        public function addrole()
+        public function create()
     {
         try {
             // Tambahkan 'action' ke with()
@@ -45,44 +45,43 @@ class RolesController extends Controller
     /**
      * Store a newly created role
      */
-    public function createrole(Request $request)
-    {
-        $request->validate([
-            'role' => 'required|string|max:255|unique:roles,role',
-            'permissions' => 'array',
-            'permissions.*' => 'exists:permissions,id'
-        ]);
+    public function store(Request $request)
+{
+    $request->validate([
+        'role' => 'required|string|max:255|unique:roles,role',
+        'permissions' => 'array',
+        'permissions.*' => 'exists:permissions,id'
+    ]);
+    
+    try {
+        DB::beginTransaction();
         
-        try {
-            DB::beginTransaction();
+        $role = new Roles();
+        $role->role = $request->role;
+        $role->akses = json_encode($request->permissions ?? []);
+        $role->save();
+        
+        DB::commit();
+        
+        return redirect()->route('settings.roles.index')
+            ->with('success', 'Role berhasil dibuat!');
             
-            $role = new Roles();
-            $role->role = $request->role;
-            $role->akses = $request->permissions ?? [];
-            $role->save();
-            
-            DB::commit();
-            
-            return redirect()->route('show.role')
-                ->with('success', 'Role berhasil dibuat!');
-                
-        } catch (\Exception $e) {
-            DB::rollback();
-            return back()->withErrors(['error' => 'Gagal membuat role: ' . $e->getMessage()]);
-        }
+    } catch (\Exception $e) {
+        DB::rollback();
+        return back()->withErrors(['error' => 'Gagal membuat role: ' . $e->getMessage()]);
     }
+}
 
     /**
      * Show form to edit role
      */
-        public function editrole($id)
+        public function edit($id)
     {
         try {
             $role = Roles::findOrFail($id);
             // Tambahkan 'action' ke with()
             $permissions = Permission::with(['menu', 'menuItem', 'action'])->get();
             $actions = Action::all();
-            
             $assignedPermissions = $this->decodeRolePermissions($role->akses);
             $groupedPermissions = $this->groupPermissionsByMenu($permissions);
             
@@ -103,7 +102,7 @@ class RolesController extends Controller
     /**
      * Update role
      */
-    public function updaterole(Request $request, $id)
+    public function update(Request $request, $id)
     {
         $request->validate([
             'role' => 'required|string|max:255|unique:roles,role,'. $id,
@@ -121,7 +120,7 @@ class RolesController extends Controller
             
             DB::commit();
             
-            return redirect()->route('show.role')
+            return redirect()->route('settings.roles.index')
                 ->with('success', 'Role berhasil diperbarui!');
                 
         } catch (\Exception $e) {
@@ -133,60 +132,31 @@ class RolesController extends Controller
     /**
      * Delete role
      */
-    public function deleterole($id)
+    public function destroy($id)
     {
         try {
             $role = Roles::findOrFail($id);
 
             // Cegah hapus SuperAdmin
             if (strtolower($role->role) === 'superadmin') {
-                return redirect()->route('show.role')
+                return redirect()->route('settings.roles.index')
                     ->with('error', 'Role Super Admin tidak dapat dihapus!');
             }
 
             // Cek apakah role masih digunakan user
             if ($role->users()->count() > 0) {
-                return redirect()->route('show.role')
+                return redirect()->route('settings.roles.index')
                     ->with('error', 'Role masih digunakan oleh ' . $role->users()->count() . ' user!');
             }
 
             $role->delete();
-            return redirect()->route('show.role')
+            return redirect()->route('settings.roles.index')
                 ->with('success', 'Role berhasil dihapus!');
 
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Error deleting role: ' . $e->getMessage()]);
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     // ========== HELPER METHODS ==========
 

@@ -21,8 +21,9 @@ class UserController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function showuser()
+    public function index()
     {
+        
         $users = User::with('roles')->get();
 
         return view('dashboard.user.user', [
@@ -30,7 +31,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function adduser(){
+    public function create(){
     
         $roles = Roles::all();
 
@@ -39,7 +40,7 @@ class UserController extends Controller
         ]);
     }
 
-        public function createuser(Request $request)
+        public function store(Request $request)
     {
         $request->validate([
             'nama' => 'required|string|max:250',
@@ -54,7 +55,7 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'role_id' => $request->role_id,
         ]);
-        return redirect()->route('show.user')
+        return redirect()->route('settings.users.index')
             ->with('success', 'Akun Telah Terdaftar!');
     }
 
@@ -65,13 +66,13 @@ class UserController extends Controller
      * @param int $id
      * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
      */
-    public function edituser($id)
+    public function edit($id)
     {
         $roles = Roles::all(); 
         $user = User::find($id);
 
         if (!$user) {
-            return redirect()->route('show.user')->with('error', 'Data tidak ditemukan!');
+            return redirect()->route('settings.users.index')->with('error', 'Data tidak ditemukan!');
         }
 
         return view('dashboard.user.edit', [
@@ -87,7 +88,7 @@ class UserController extends Controller
      * @param int $id
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function updateuser(Request $request, $id)
+    public function update(Request $request, $id)
     {
         $request->validate([
             'username' => 'nullable|max:250|unique:users,username,' . $id,
@@ -97,7 +98,7 @@ class UserController extends Controller
         $datauser = User::find($id);
 
         if (!$datauser) {
-            return redirect()->route('show.user')->with('error', 'Data tidak ditemukan!');
+            return redirect()->route('settings.users.index')->with('error', 'Data tidak ditemukan!');
         }
 
         // Update hanya field yang diisi
@@ -118,7 +119,7 @@ class UserController extends Controller
 
         $datauser->save();
 
-        return redirect()->route('show.user')->with('success', 'Data berhasil diperbarui!');
+        return redirect()->route('settings.users.index')->with('success', 'Data berhasil diperbarui!');
     }
 
     /**
@@ -127,17 +128,17 @@ class UserController extends Controller
      * @param int $id
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function deleteuser($id)
+    public function destroy($id)
     {
         $deletedatauser = User::find($id);
 
         if (!$deletedatauser) {
-            return redirect()->route('show.user')->with('error', 'Data tidak ditemukan!');
+            return redirect()->route('settings.users.index')->with('error', 'Data tidak ditemukan!');
         }
 
         $deletedatauser->delete();
 
-        return redirect()->route('show.user')->with('success', 'Data berhasil dihapus!');
+        return redirect()->route('settings.users.index')->with('success', 'Data berhasil dihapus!');
     }
 
     /**
@@ -149,8 +150,9 @@ class UserController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function ubahpassword()
+    public function changePassword()
     {
+
         return view('dashboard.user.updatepassword', [
             'iconname' => 'Ubah Password',
         ]);
@@ -162,7 +164,7 @@ class UserController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function updatepassword(Request $request)
+    public function updatePassword(Request $request)
     {
         try {
             // Validasi input pengguna

@@ -26,7 +26,7 @@
             <i class="fas fa-caret-down dropdown-icon"></i> <!-- Dropdown indicator -->
 
             <div class="dropdown-content-navbar">
-            <a href="{{ route('ubah.password') }}" class="dropdown-item">Profil</a>
+            <a href="{{ route('settings.users.password.change') }}" class="dropdown-item">Profil</a>
             <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="dropdown-item">Keluar</a>
             <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">@csrf</form>
             </div>

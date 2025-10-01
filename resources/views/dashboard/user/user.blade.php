@@ -4,7 +4,7 @@
 <section class="roles-section" id="user">
     <div class="roles-header">
         <h1>User</h1>
-        <a href="{{ route('add.user') }}" class="add-button">
+        <a href="{{ route('settings.users.create') }}" class="add-button">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
@@ -42,7 +42,7 @@
                                                 {{-- View --}}
                                             </button>
                                         </form>
-                                        <form action="{{ route('edit.user', $user->id) }} ">
+                                        <form action="{{ route('settings.users.edit', $user->id) }} ">
                                             <button type="submit" class="btn btn-sm btn-primary">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -51,7 +51,7 @@
                                                 {{-- Edit --}}
                                             </button>
                                         </form>
-                                        <form action="{{ route('delete.user', $user->id) }}" method="POST" class="delete-form" onsubmit="return confirm('Are you sure you want to delete this role?');">
+                                        <form action="{{ route('settings.users.destroy', $user->id) }}" method="POST" class="delete-form" onsubmit="return confirm('Are you sure you want to delete this role?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger" style="border: none;">

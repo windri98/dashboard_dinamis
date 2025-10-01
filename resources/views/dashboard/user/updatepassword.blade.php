@@ -26,7 +26,7 @@
         @endif
 
         <div class="container-edit">
-            <form action="{{ route('update.password') }}" method="POST" class="form-container" id="passwordForm">
+            <form action="{{ route('settings.users.password.update') }}" method="POST" class="form-container" id="passwordForm">
                 @csrf
                 @method('PUT')
 

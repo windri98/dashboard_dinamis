@@ -5,7 +5,7 @@
 <section class="roles-section" id="role">
     <div class="roles-header">
         <h1>Roles</h1>
-        <a href="{{ route('add.role') }}" class="add-button">Add New Role</a>
+        <a href="{{ route('settings.roles.create') }}" class="add-button">Add New Role</a>
     </div>
 
     <div class="table-container">
@@ -106,7 +106,7 @@
                             </td>
                             <td class="action-cell">
                                 <div class="action-buttons">
-                                    <form action="{{ route('edit.role', $role->id) }}">
+                                    <form action="{{ route('settings.roles.edit', $role->id) }}">
                                         <button type="submit" class="btn btn-sm btn-primary" style="border: none">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -123,7 +123,7 @@
                                         </svg>
                                         Edit
                                     </a> --}}
-                                    <form action="{{ route('delete.role', $role->id) }}" method="POST" class="delete-form" onsubmit="return confirm('Are you sure you want to delete this role?');">
+                                    <form action="{{ route('settings.roles.destroy', $role->id) }}" method="POST" class="delete-form" onsubmit="return confirm('Are you sure you want to delete this role?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-danger" style="border: none;">
