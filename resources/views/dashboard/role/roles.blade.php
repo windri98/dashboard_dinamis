@@ -220,5 +220,25 @@
         </div>
     </div>
 </section>
+<script>
+        // Function untuk toggle permissions
+    function togglePermissionsSlide(button) {
+        const container = button.parentElement.querySelector('.permissions-container');
+        const toggleText = button.querySelector('.toggle-text');
+        
+        // Toggle class show pada container
+        container.classList.toggle('show');
+        
+        // Toggle class active pada button untuk rotasi icon
+        button.classList.toggle('active');
+        
+        // Update text button
+        if (container.classList.contains('show')) {
+            toggleText.textContent = 'Sembunyikan Akses';
+        } else {
+            toggleText.textContent = 'Lihat Akses';
+        }
+    }
+</script>
 
 @endsection
