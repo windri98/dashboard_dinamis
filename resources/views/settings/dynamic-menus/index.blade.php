@@ -2,6 +2,81 @@
 
 @section('content')
 
+    <!-- Modern Alert Container -->
+    <div id="alertContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;">
+        @if(session('success'))
+            <div class="modern-alert alert-success" role="alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <strong>Berhasil!</strong>
+                        <p>{{ session('success') }}</p>
+                    </div>
+                    <button class="alert-close" data-alert-close="true">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="alert-progress"></div>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="modern-alert alert-error" role="alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <strong>Gagal!</strong>
+                        <p>{{ session('error') }}</p>
+                    </div>
+                    <button class="alert-close" data-alert-close="true">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="alert-progress"></div>
+            </div>
+        @endif
+
+        @if(session('warning'))
+            <div class="modern-alert alert-warning" role="alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <strong>Peringatan!</strong>
+                        <p>{{ session('warning') }}</p>
+                    </div>
+                    <button class="alert-close" data-alert-close="true">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="alert-progress"></div>
+            </div>
+        @endif
+
+        @if(session('info'))
+            <div class="modern-alert alert-info" role="alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <strong>Info!</strong>
+                        <p>{{ session('info') }}</p>
+                    </div>
+                    <button class="alert-close" data-alert-close="true">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="alert-progress"></div>
+            </div>
+        @endif
+    </div>
+
     <section class="#" id="#">
         <div class="roles-header">
             <h1>Tabel Menu</h1>

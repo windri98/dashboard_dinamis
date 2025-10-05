@@ -1,4 +1,34 @@
-// Fixed Dashboard JavaScript - Non-conflicting version
+// ============= CONSTANTS & CONFIG =============
+const CONFIG = {
+    ALERT_AUTO_CLOSE_DELAY: 4000,
+    ALERT_ANIMATION_DURATION: 300,
+    RESIZE_DEBOUNCE_DELAY: 150,
+    DEBUG: false
+};
+
+const ALERT_ICONS = {
+    success: 'fas fa-check-circle',
+    error: 'fas fa-exclamation-circle',
+    warning: 'fas fa-exclamation-triangle',
+    info: 'fas fa-info-circle'
+};
+
+// ============= UTILITY FUNCTIONS =============
+function debugLog(...args) {
+    if (CONFIG.DEBUG) {
+        console.log(...args);
+    }
+}
+
+function debounce(func, delay) {
+    let timer;
+    return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// ============= MAIN DASHBOARD INITIALIZATION =============
 document.addEventListener('DOMContentLoaded', function() {
     
     // ===== NAVBAR DROPDOWN =====
@@ -22,10 +52,10 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleSidebarBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             if (window.innerWidth <= 768) {
-                sidebar.classList.toggle('show');
-                overlay.classList.toggle('show');
+                if (sidebar) sidebar.classList.toggle('show');
+                if (overlay) overlay.classList.toggle('show');
             } else {
-                container.classList.toggle('sidebar-collapsed');
+                if (container) container.classList.toggle('sidebar-collapsed');
             }
         });
     }
@@ -33,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (overlay) {
         overlay.addEventListener('click', function(e) {
             e.stopPropagation();
-            sidebar.classList.remove('show');
+            if (sidebar) sidebar.classList.remove('show');
             overlay.classList.remove('show');
         });
     }
@@ -128,15 +158,64 @@ document.addEventListener('DOMContentLoaded', function() {
     if (notificationBtn) {
         notificationBtn.addEventListener('click', function(e) {
             e.stopPropagation();
-            alert('Notifikasi: Anda memiliki 3 pemberitahuan baru');
+            showAlert('info', 'Notifikasi', 'Anda memiliki 3 pemberitahuan baru');
         });
     }
 
     // ===== CHARTS SETUP =====
+    initializeCharts();
+
+    // ===== INITIALIZE ALERTS ===== ✅ TAMBAHAN PENTING
+    initializeAlerts();
+
+    // ===== RESPONSIVE HANDLER WITH DEBOUNCE =====
+    const handleResize = debounce(function() {
+        if (window.innerWidth <= 768) {
+            if (container) {
+                container.classList.remove('sidebar-collapsed');
+            }
+            if (sidebar && sidebar.classList.contains('show') && overlay) {
+                overlay.classList.add('show');
+            }
+        } else {
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+        }
+    }, CONFIG.RESIZE_DEBOUNCE_DELAY);
+
+    window.addEventListener('resize', handleResize);
+
+    // ===== GLOBAL CLICK HANDLER =====
+    document.addEventListener('click', function(e) {
+        const clickedElement = e.target;
+        
+        // Jangan close apa-apa jika click di dalam modal
+        if (clickedElement.closest('.modal')) {
+            return;
+        }
+        
+        // Close navbar dropdown jika click di luar profile
+        if (dropdownContentNavbar && !clickedElement.closest('.profile')) {
+            dropdownContentNavbar.classList.remove('show');
+        }
+        
+        // Close sidebar dropdown jika click di luar sidebar
+        if (!clickedElement.closest('.sidebar')) {
+            closeAllDropdowns();
+        }
+    });
+
+    debugLog('Dashboard JavaScript initialized successfully');
+});
+
+// ============= CHARTS INITIALIZATION =============
+function initializeCharts() {
     // Monthly Activity Chart
-    if (document.getElementById('monthlyActivityChart')) {
-        const activityChartCtx = document.getElementById('monthlyActivityChart').getContext('2d');
-        const activityChart = new Chart(activityChartCtx, {
+    const monthlyChartElement = document.getElementById('monthlyActivityChart');
+    if (monthlyChartElement) {
+        const activityChartCtx = monthlyChartElement.getContext('2d');
+        new Chart(activityChartCtx, {
             type: 'line',
             data: {
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
@@ -154,17 +233,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false
             }
         });
-
-        const chartPlaceholder = document.querySelector('.chart-placeholder');
-        if (chartPlaceholder) {
-            chartPlaceholder.style.display = 'none';
-        }
     }
 
     // User Distribution Chart
-    if (document.getElementById('userDistributionChart')) {
-        const userChartCtx = document.getElementById('userDistributionChart').getContext('2d');
-        const userChart = new Chart(userChartCtx, {
+    const userChartElement = document.getElementById('userDistributionChart');
+    if (userChartElement) {
+        const userChartCtx = userChartElement.getContext('2d');
+        new Chart(userChartCtx, {
             type: 'pie',
             data: {
                 labels: ['Desktop', 'Mobile', 'Tablet'],
@@ -189,49 +264,136 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false
             }
         });
-
-        const chartPlaceholders = document.querySelectorAll('.chart-placeholder');
-        if (chartPlaceholders[1]) {
-            chartPlaceholders[1].style.display = 'none';
-        }
     }
 
-    // ===== RESPONSIVE HANDLER =====
-    window.addEventListener('resize', function() {
-        if (window.innerWidth <= 768) {
-            if (container) {
-                container.classList.remove('sidebar-collapsed');
-            }
-            if (sidebar && sidebar.classList.contains('show') && overlay) {
-                overlay.classList.add('show');
-            }
-        } else {
-            if (overlay) {
-                overlay.classList.remove('show');
-            }
+    // Hide chart placeholders
+    const chartPlaceholders = document.querySelectorAll('.chart-placeholder');
+    chartPlaceholders.forEach(placeholder => {
+        placeholder.style.display = 'none';
+    });
+}
+
+// ============= ALERT SYSTEM =============
+function initializeAlerts() {
+    const alerts = document.querySelectorAll('.modern-alert');
+    debugLog('Found alerts:', alerts.length);
+    
+    alerts.forEach((alert, index) => {
+        debugLog(`Initializing alert ${index}`);
+        
+        if (!alert.hasAttribute('data-initialized')) {
+            setupAlertHandlers(alert);
+            alert.setAttribute('data-initialized', 'true');
+            
+            alert._timerId = setTimeout(() => {
+                debugLog(`Auto closing alert ${index}`);
+                closeAlert(alert);
+            }, CONFIG.ALERT_AUTO_CLOSE_DELAY);
         }
     });
+}
 
-    // ===== GLOBAL CLICK HANDLER (IMPROVED) =====
-    // Handle clicks outside specific elements
-    document.addEventListener('click', function(e) {
-        const clickedElement = e.target;
-        
-        // Jangan close apa-apa jika click di dalam modal
-        if (clickedElement.closest('.modal')) {
-            return;
-        }
-        
-        // Close navbar dropdown jika click di luar profile
-        if (dropdownContentNavbar && !clickedElement.closest('.profile')) {
-            dropdownContentNavbar.classList.remove('show');
-        }
-        
-        // Close sidebar dropdown jika click di luar sidebar
-        if (!clickedElement.closest('.sidebar')) {
-            closeAllDropdowns();
-        }
-    });
+function setupAlertHandlers(alert) {
+    const closeBtn = alert.querySelector('[data-alert-close="true"]');
+    if (closeBtn) {
+        const handler = (e) => handleAlertClose(e, alert);
+        closeBtn.addEventListener('click', handler);
+        alert._closeHandler = handler;
+    }
+}
 
-    console.log('Dashboard JavaScript initialized successfully');
-});
+function handleAlertClose(e, alert) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (alert) {
+        debugLog('Manual close triggered');
+        closeAlert(alert);
+    }
+}
+
+function closeAlert(alertElement) {
+    // Validasi element
+    if (!alertElement || !alertElement.classList) {
+        debugLog('Invalid alert element');
+        return;
+    }
+    
+    // Cek apakah sudah dalam proses closing
+    if (alertElement.dataset.isClosing === 'true') {
+        debugLog('Alert already closing');
+        return;
+    }
+    
+    debugLog('Closing alert');
+    
+    // Tandai sebagai closing
+    alertElement.dataset.isClosing = 'true';
+    
+    // Cancel timer jika ada
+    if (alertElement._timerId) {
+        clearTimeout(alertElement._timerId);
+        delete alertElement._timerId;
+    }
+    
+    // Remove event listener untuk mencegah memory leak
+    const closeBtn = alertElement.querySelector('[data-alert-close="true"]');
+    if (closeBtn && alertElement._closeHandler) {
+        closeBtn.removeEventListener('click', alertElement._closeHandler);
+        delete alertElement._closeHandler;
+    }
+    
+    // Start closing animation
+    alertElement.classList.add('closing');
+    
+    // Remove from DOM after animation
+    setTimeout(() => {
+        if (alertElement && alertElement.parentNode) {
+            debugLog('Removing alert from DOM');
+            alertElement.remove();
+        }
+    }, CONFIG.ALERT_ANIMATION_DURATION);
+}
+
+function showAlert(type, title, message) {
+    const container = document.getElementById('alertContainer');
+    if (!container) {
+        console.error('Alert container not found');
+        return;
+    }
+    
+    debugLog(`Creating ${type} alert:`, title, message);
+    
+    const icon = ALERT_ICONS[type] || ALERT_ICONS.info;
+    
+    const alertHTML = `
+        <div class="modern-alert alert-${type}" role="alert">
+            <div class="alert-content">
+                <div class="alert-icon">
+                    <i class="${icon}"></i>
+                </div>
+                <div class="alert-text">
+                    <strong>${title}</strong>
+                    <p>${message}</p>
+                </div>
+                <button class="alert-close" data-alert-close="true" aria-label="Close alert">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="alert-progress"></div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', alertHTML);
+    const newAlert = container.lastElementChild;
+    
+    // Setup handlers untuk alert baru
+    setupAlertHandlers(newAlert);
+    newAlert.setAttribute('data-initialized', 'true');
+    
+    // Auto close timer
+    newAlert._timerId = setTimeout(() => {
+        debugLog('Auto closing new alert');
+        closeAlert(newAlert);
+    }, CONFIG.ALERT_AUTO_CLOSE_DELAY);
+}

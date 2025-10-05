@@ -1,10 +1,87 @@
 @extends('layouts.app')
 
 @section('content')
+
+    <!-- Modern Alert Container -->
+    <div id="alertContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;">
+        @if(session('success'))
+            <div class="modern-alert alert-success" role="alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <strong>Berhasil!</strong>
+                        <p>{{ session('success') }}</p>
+                    </div>
+                    <button class="alert-close" data-alert-close="true">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="alert-progress"></div>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="modern-alert alert-error" role="alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <strong>Gagal!</strong>
+                        <p>{{ session('error') }}</p>
+                    </div>
+                    <button class="alert-close" data-alert-close="true">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="alert-progress"></div>
+            </div>
+        @endif
+
+        @if(session('warning'))
+            <div class="modern-alert alert-warning" role="alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <strong>Peringatan!</strong>
+                        <p>{{ session('warning') }}</p>
+                    </div>
+                    <button class="alert-close" data-alert-close="true">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="alert-progress"></div>
+            </div>
+        @endif
+
+        @if(session('info'))
+            <div class="modern-alert alert-info" role="alert">
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="alert-text">
+                        <strong>Info!</strong>
+                        <p>{{ session('info') }}</p>
+                    </div>
+                    <button class="alert-close" data-alert-close="true">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="alert-progress"></div>
+            </div>
+        @endif
+    </div>
+
     <div class="content-header">
         <h1 id="pageTitle">Kelola Menu : {{ $dynamicMenu->name }}</h1>
         <p id="pageDescription">Tambah, edit, atau hapus menu dropdown</p>
     </div>
+    
     <div class="content-body" id="contentArea">
         <div class="btn" style="display: flex; justify-content: flex-end; gap: 10px;">
             <button class="btn btn-primary" onclick="openSubmenuModal({{ $dynamicMenu->id }})">
@@ -15,19 +92,7 @@
                 <i class="fas fa-arrow-left"></i> Kembali
             </a>
         </div>
-        {{-- Notifikasi --}}
-        @if(session('success'))
-            <div class="alert alert-primary alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
-        @if(session('error'))
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
+
         <div class="table-responsive">
             <table class="roles-table">
                 <thead>
@@ -300,35 +365,20 @@
      * Buka modal untuk tambah submenu
      */
     function openSubmenuModal(parentId) {
-        // Reset form
         document.getElementById('submenuForm').reset();
-        
-        // Set modal title dan tombol submit
         document.getElementById('submenuModalTitle').textContent = 'Tambah Sub Menu';
         document.getElementById('submenuSubmitBtn').innerHTML = '<i class="fas fa-save"></i> Simpan Sub Menu';
-        
-        // Set form action untuk create
         document.getElementById('submenuForm').action = '{{ route("settings.dynamic-menu-items.store") }}';
         document.getElementById('submenuMethodField').innerHTML = '';
-        
-        // Set parent ID
         document.getElementById('submenuParentId').value = parentId;
         document.getElementById('submenuId').value = '';
-        
-        // Hide checkbox aktif untuk mode tambah
         document.getElementById('submenuActiveGroup').style.display = 'none';
-        
-        // Set default values
         document.getElementById('submenuName').value = '';
         document.getElementById('submenuIcon').value = 'fas fa-link';
         document.getElementById('submenuLinkType').value = 'table';
         document.getElementById('submenuPermissionKey').value = '';
         document.getElementById('submenuOrder').value = '0';
-        
-        // Reset input link
         toggleSubmenuInputs();
-        
-        // Tampilkan modal
         document.getElementById('submenuModal').style.display = 'block';
     }
 
@@ -336,33 +386,21 @@
      * Buka modal untuk edit submenu
      */
     function openEditSubmenuModal(submenu) {
-        // Set modal title dan tombol submit
         document.getElementById('submenuModalTitle').textContent = 'Edit Sub Menu';
         document.getElementById('submenuSubmitBtn').innerHTML = '<i class="fas fa-save"></i> Update Sub Menu';
-        
-        // Set form action untuk update
         document.getElementById('submenuForm').action = `/settings/dynamic-menu-items/${submenu.id}`;
         document.getElementById('submenuMethodField').innerHTML = '<input type="hidden" name="_method" value="PUT">';
-        
-        // Set ID fields
         document.getElementById('submenuId').value = submenu.id;
         document.getElementById('submenuParentId').value = submenu.parent_id;
-        
-        // Isi form fields
         document.getElementById('submenuName').value = submenu.name || '';
         document.getElementById('submenuIcon').value = submenu.icon || 'fas fa-link';
         document.getElementById('submenuLinkType').value = submenu.link_type || 'table';
         document.getElementById('submenuPermissionKey').value = submenu.permission_key || '';
         document.getElementById('submenuOrder').value = submenu.order || 0;
-        
-        // Tampilkan checkbox aktif untuk mode edit
         document.getElementById('submenuActiveGroup').style.display = 'block';
         document.getElementById('submenuIsActive').checked = !!submenu.is_active;
-        
-        // Toggle input link berdasarkan tipe
         toggleSubmenuInputs();
         
-        // Set nilai link berdasarkan tipe
         setTimeout(() => {
             switch(submenu.link_type) {
                 case 'table':
@@ -377,7 +415,6 @@
             }
         }, 100);
         
-        // Tampilkan modal
         document.getElementById('submenuModal').style.display = 'block';
     }
 
@@ -420,17 +457,14 @@
         const routeGroup = document.getElementById('submenuRouteGroup');
         const urlGroup = document.getElementById('submenuUrlGroup');
 
-        // Sembunyikan semua input group
         tableGroup.style.display = 'none';
         routeGroup.style.display = 'none';
         urlGroup.style.display = 'none';
 
-        // Hapus atribut name untuk menghindari konflik
         document.getElementById('submenuTableSelect').removeAttribute('name');
         document.getElementById('submenuRouteInput').removeAttribute('name');
         document.getElementById('submenuUrlInput').removeAttribute('name');
 
-        // Tampilkan group yang relevan dan set atribut name
         switch(linkType) {
             case 'table':
                 tableGroup.style.display = 'block';
@@ -455,7 +489,6 @@
     function closeModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
         
-        // Reset form validation states
         const form = modalId === 'submenuModal' ? 
             document.getElementById('submenuForm') : 
             document.getElementById('tableForm');
@@ -502,7 +535,6 @@
         const linkType = document.getElementById('submenuLinkType').value;
         let linkValue = '';
         
-        // Ambil nilai link berdasarkan tipe yang dipilih
         switch(linkType) {
             case 'table':
                 linkValue = document.getElementById('submenuTableSelect').value;
@@ -515,20 +547,17 @@
                 break;
         }
         
-        // Validasi bahwa nilai link harus diisi
         if (!linkValue.trim()) {
             e.preventDefault();
             alert('Silakan pilih/isi nilai untuk tipe link yang dipilih.');
             return false;
         }
         
-        // Tampilkan loading state
         const submitBtn = document.getElementById('submenuSubmitBtn');
         const originalHtml = submitBtn.innerHTML;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
         submitBtn.disabled = true;
         
-        // Reset loading state jika ada error
         setTimeout(() => {
             submitBtn.innerHTML = originalHtml;
             submitBtn.disabled = false;
@@ -544,7 +573,6 @@
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
         submitBtn.disabled = true;
         
-        // Reset loading state jika ada error
         setTimeout(() => {
             submitBtn.innerHTML = originalHtml;
             submitBtn.disabled = false;
@@ -583,31 +611,9 @@
     // ===== INISIALISASI =====
     
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize submenu form
         toggleSubmenuInputs();
-        
-        // Setup input validation
         setupInputValidation();
-        
-        // Auto dismiss alerts after 5 seconds
-        const alerts = document.querySelectorAll('.alert');
-        alerts.forEach(alert => {
-            setTimeout(() => {
-                if (alert && alert.parentNode) {
-                    alert.style.opacity = '0';
-                    alert.style.transition = 'opacity 0.5s';
-                    setTimeout(() => {
-                        if (alert.parentNode) {
-                            alert.parentNode.removeChild(alert);
-                        }
-                    }, 500);
-                }
-            }, 5000);
-        });
     });
-
-
-    
 </script>
     
 @endsection

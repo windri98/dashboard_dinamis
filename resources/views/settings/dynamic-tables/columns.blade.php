@@ -3,6 +3,82 @@
 @section('title', 'Kolom Tabel - ' . $dynamicTable->name)
 
 @section('content')
+
+<!-- Modern Alert Container -->
+<div id="alertContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;">
+    @if(session('success'))
+        <div class="modern-alert alert-success" role="alert">
+            <div class="alert-content">
+                <div class="alert-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="alert-text">
+                    <strong>Berhasil!</strong>
+                    <p>{{ session('success') }}</p>
+                </div>
+                <button class="alert-close" data-alert-close="true">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="alert-progress"></div>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="modern-alert alert-error" role="alert">
+            <div class="alert-content">
+                <div class="alert-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div class="alert-text">
+                    <strong>Gagal!</strong>
+                    <p>{{ session('error') }}</p>
+                </div>
+                <button class="alert-close" data-alert-close="true">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="alert-progress"></div>
+        </div>
+    @endif
+
+    @if(session('warning'))
+        <div class="modern-alert alert-warning" role="alert">
+            <div class="alert-content">
+                <div class="alert-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="alert-text">
+                    <strong>Peringatan!</strong>
+                    <p>{{ session('warning') }}</p>
+                </div>
+                <button class="alert-close" data-alert-close="true">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="alert-progress"></div>
+        </div>
+    @endif
+
+    @if(session('info'))
+        <div class="modern-alert alert-info" role="alert">
+            <div class="alert-content">
+                <div class="alert-icon">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="alert-text">
+                    <strong>Info!</strong>
+                    <p>{{ session('info') }}</p>
+                </div>
+                <button class="alert-close" data-alert-close="true">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="alert-progress"></div>
+        </div>
+    @endif
+</div>
+
 <div class="container-fluid">
     <div class="roles-header">
         <div>
@@ -20,20 +96,6 @@
             </a>
         </div>
     </div>
-
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" onclick="this.closest('.alert').style.display='none'"></button>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" onclick="this.closest('.alert').style.display='none'"></button>
-        </div>
-    @endif
 
     <div class="card shadow">
         <div class="card-header py-3">
@@ -95,26 +157,25 @@
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-primary" 
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-primary" 
                                                     onclick="openEditModalSafe(this)"
                                                     data-column-id="{{ $column->id }}"
-                                                    data-column-data="{{ base64_encode(json_encode([
-                                                        'id' => $column->id,
-                                                        'name' => $column->name,
-                                                        'type' => $column->type,
-                                                        'is_required' => $column->is_required,
-                                                        'is_searchable' => $column->is_searchable,
-                                                        'is_sortable' => $column->is_sortable,
-                                                        'show_in_list' => $column->show_in_list,
-                                                        'is_active' => $column->is_active,
-                                                        'order' => $column->order,
-                                                        'options' => $column->options
-                                                    ])) }}"
+                                                    data-column-name="{{ $column->name }}"
+                                                    data-column-type="{{ $column->type }}"
+                                                    data-column-order="{{ $column->order }}"
+                                                    data-is-required="{{ $column->is_required ? '1' : '0' }}"
+                                                    data-is-searchable="{{ $column->is_searchable ? '1' : '0' }}"
+                                                    data-is-sortable="{{ $column->is_sortable ? '1' : '0' }}"
+                                                    data-show-in-list="{{ $column->show_in_list ? '1' : '0' }}"
+                                                    data-is-active="{{ $column->is_active ? '1' : '0' }}"
+                                                    data-options='@json($column->options)'
                                                     title="Edit Kolom">
                                                 <i class="fas fa-edit"></i>
                                             </button>
 
-                                            <button type="button" class="btn btn-sm btn-danger" 
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger" 
                                                     onclick="deleteColumn({{ $column->id }})"
                                                     title="Hapus Kolom">
                                                 <i class="fas fa-trash"></i>
@@ -185,11 +246,9 @@
                     </div>
                 </div>
 
-                <!-- Info untuk enum -->
                 <div class="alert alert-info mt-2" id="enumWarning" style="display: none;" role="alert">
                     <strong>Catatan:</strong> Jika menggunakan tipe data <code>enum</code>, 
-                    maka <u>data tidak dapat diedit</u> setelah dibuat.<br>
-                    Pastikan penulisan opsi enum sudah benar sejak awal.
+                    pastikan penulisan opsi enum sudah benar sejak awal.
                 </div>
                 
                 <div class="form-group d-none" id="add_enum_options">
@@ -318,9 +377,7 @@
                 
                 <div class="form-group d-none" id="edit_enum_options">
                     <label class="form-label">Pilihan Enum</label>
-                    <div id="edit_enum_values">
-                        {{-- Data enum akan diisi via JS saat openEditModal --}}
-                    </div>
+                    <div id="edit_enum_values"></div>
                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="addEnumOption('edit')">
                         <i class="fas fa-plus"></i> Tambah Pilihan
                     </button>
@@ -392,89 +449,24 @@
 </div>
 
 <script>
-    /**
-     * Tutup semua modal yang terbuka
-     */
     function closeAllModals() {
         const modals = ['addColumnModal', 'editColumnModal'];
         modals.forEach(modalId => {
             const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'none';
-            }
+            if (modal) modal.style.display = 'none';
         });
     }
 
-    /**
-     * Tutup modal tertentu
-     */
     function closeModal(modalId) {
         const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'none';
-        }
+        if (modal) modal.style.display = 'none';
     }
 
-    /**
-     * Tutup alert
-     */
-    function closeAlert(button) {
-        const alert = button.closest('.alert');
-        if (alert) {
-            alert.remove();
-        }
-    }
-
-    /**
-     * Show alert message dengan auto dismiss yang benar
-     */
-    function showAlert(type, message) {
-        // Remove existing alerts
-        const existingAlerts = document.querySelectorAll('.alert-auto-dismiss');
-        existingAlerts.forEach(alert => alert.remove());
-        
-        // Create new alert
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show alert-auto-dismiss`;
-        alertDiv.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>${message}
-            <button type="button" class="btn-close" onclick="closeAlert(this)"></button>
-        `;
-        
-        // Insert after roles-header
-        const rolesHeader = document.querySelector('.roles-header');
-        if (rolesHeader) {
-            rolesHeader.insertAdjacentElement('afterend', alertDiv);
-        } else {
-            // Fallback jika roles-header tidak ada
-            const container = document.querySelector('.container-fluid');
-            if (container) {
-                container.insertAdjacentElement('afterbegin', alertDiv);
-            }
-        }
-        
-        // Auto dismiss after 4 seconds
-        setTimeout(() => {
-            if (alertDiv && alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 4000);
-    }
-
-    /**
-     * Buka modal tambah kolom
-     */
     function openAddModal() {
-        // Tutup modal lain yang mungkin terbuka
         closeAllModals();
-        
-        // Reset form
         const form = document.getElementById('addColumnForm');
-        if (form) {
-            form.reset();
-        }
+        if (form) form.reset();
         
-        // Set default values dengan safety check
         const searchable = document.getElementById('add_is_searchable');
         const sortable = document.getElementById('add_is_sortable');
         const showInList = document.getElementById('add_show_in_list');
@@ -485,55 +477,40 @@
         if (showInList) showInList.checked = true;
         if (order) order.value = 0;
         
-        // Hide enum options initially
         toggleEnumOptions('add');
         
-        // Show modal
         const modal = document.getElementById('addColumnModal');
-        if (modal) {
-            modal.style.display = 'block';
-        }
+        if (modal) modal.style.display = 'block';
     }
 
-    /**
-     * Fungsi aman untuk membuka modal edit menggunakan data attributes
-     */
     function openEditModalSafe(button) {
         try {
-            const columnId = button.dataset.columnId;
-            const columnDataBase64 = button.dataset.columnData;
+            const columnData = {
+                id: button.dataset.columnId,
+                name: button.dataset.columnName,
+                type: button.dataset.columnType,
+                order: button.dataset.columnOrder,
+                is_required: button.dataset.isRequired === '1',
+                is_searchable: button.dataset.isSearchable === '1',
+                is_sortable: button.dataset.isSortable === '1',
+                show_in_list: button.dataset.showInList === '1',
+                is_active: button.dataset.isActive === '1',
+                options: JSON.parse(button.dataset.options || '{}')
+            };
             
-            if (!columnDataBase64) {
-                showAlert('error', 'Data kolom tidak ditemukan');
-                return;
-            }
-            
-            // Decode base64 dan parse JSON
-            const columnData = JSON.parse(atob(columnDataBase64));
-            
-            // Call original function dengan data yang sudah di-decode
-            openEditModal(columnId, columnData);
-            
+            openEditModal(columnData.id, columnData);
         } catch (error) {
             console.error('Error parsing column data:', error);
             showAlert('error', 'Gagal memuat data kolom');
         }
     }
 
-    /**
-     * Buka modal edit kolom (original function, tapi improved)
-     */
     function openEditModal(id, column) {
-        // Tutup modal lain yang mungkin terbuka
         closeAllModals();
         
-        // Set form action dengan safety check
         const form = document.getElementById('editColumnForm');
-        if (form) {
-            form.action = '/settings/table-columns/' + id;
-        }
+        if (form) form.action = '/settings/table-columns/' + id;
         
-        // Fill form data dengan safety check
         const nameField = document.getElementById('edit_name');
         const typeField = document.getElementById('edit_type');
         const orderField = document.getElementById('edit_order');
@@ -542,7 +519,6 @@
         if (typeField) typeField.value = column.type || '';
         if (orderField) orderField.value = column.order || 0;
         
-        // Handle checkboxes dengan safety check
         const checkboxFields = [
             { id: 'edit_is_required', value: column.is_required },
             { id: 'edit_is_searchable', value: column.is_searchable },
@@ -553,37 +529,22 @@
         
         checkboxFields.forEach(field => {
             const element = document.getElementById(field.id);
-            if (element) {
-                element.checked = field.value || false;
-            }
+            if (element) element.checked = field.value || false;
         });
         
-        // Handle enum options
         handleEditEnumOptions(column);
-        
-        // Toggle enum options setelah set type
         toggleEnumOptions('edit');
         
-        // Show modal
         const modal = document.getElementById('editColumnModal');
-        if (modal) {
-            modal.style.display = 'block';
-        }
+        if (modal) modal.style.display = 'block';
     }
 
-    /**
-     * Handle enum options untuk edit modal
-     */
     function handleEditEnumOptions(column) {
         const enumOptionsDiv = document.getElementById('edit_enum_options');
         const enumValuesContainer = document.getElementById('edit_enum_values');
         
-        if (!enumOptionsDiv || !enumValuesContainer) {
-            console.warn('Enum options containers not found');
-            return;
-        }
+        if (!enumOptionsDiv || !enumValuesContainer) return;
         
-        // Clear existing options
         enumValuesContainer.innerHTML = '';
         
         if (column.type === 'enum' && column.options && column.options.values && Array.isArray(column.options.values)) {
@@ -595,7 +556,6 @@
                 }
             });
             
-            // Jika tidak ada nilai, tambahkan minimal 2 input kosong
             if (column.options.values.length === 0) {
                 addEnumOptionWithValue('edit', '');
                 addEnumOptionWithValue('edit', '');
@@ -605,9 +565,6 @@
         }
     }
 
-    /**
-     * Add enum option dengan nilai tertentu
-     */
     function addEnumOptionWithValue(prefix, value = '') {
         const container = document.getElementById(prefix + '_enum_values');
         if (!container) return;
@@ -623,9 +580,6 @@
         container.appendChild(div);
     }
 
-    /**
-     * Toggle enum options visibility
-     */
     function toggleEnumOptions(prefix) {
         const typeSelect = document.getElementById(prefix + '_type');
         const enumOptions = document.getElementById(prefix + '_enum_options');
@@ -636,12 +590,10 @@
         if (typeSelect.value === 'enum') {
             enumOptions.classList.remove('d-none');
             
-            // Show warning hanya untuk add modal
             if (enumWarning && prefix === 'add') {
                 enumWarning.style.display = 'block';
             }
             
-            // Pastikan ada minimal 2 input enum
             const existingInputs = enumOptions.querySelectorAll('input[name="options[values][]"]');
             if (existingInputs.length === 0) {
                 addEnumOption(prefix);
@@ -650,22 +602,15 @@
         } else {
             enumOptions.classList.add('d-none');
             
-            // Hide warning
             if (enumWarning && prefix === 'add') {
                 enumWarning.style.display = 'none';
             }
         }
     }
 
-    /**
-     * Tambah option enum baru
-     */
     function addEnumOption(prefix) {
         const container = document.getElementById(prefix + '_enum_values');
-        if (!container) {
-            console.warn('Container not found for prefix:', prefix);
-            return;
-        }
+        if (!container) return;
         
         const div = document.createElement('div');
         div.className = 'input-group mb-2';
@@ -677,22 +622,15 @@
         `;
         container.appendChild(div);
         
-        // Focus pada input yang baru ditambahkan
         const newInput = div.querySelector('input');
-        if (newInput) {
-            newInput.focus();
-        }
+        if (newInput) newInput.focus();
     }
 
-    /**
-     * Hapus option enum
-     */
     function removeEnumOption(button) {
         const inputGroup = button.closest('.input-group');
         const container = button.closest('[id$="_enum_values"]');
         
         if (inputGroup && container) {
-            // Pastikan minimal ada 1 input yang tersisa
             const remainingInputs = container.querySelectorAll('.input-group');
             if (remainingInputs.length > 1) {
                 inputGroup.remove();
@@ -702,9 +640,6 @@
         }
     }
 
-    /**
-     * Delete column dengan konfirmasi
-     */
     function deleteColumn(columnId) {
         if (!columnId) {
             showAlert('error', 'ID kolom tidak valid');
@@ -715,13 +650,11 @@
             return;
         }
         
-        // Create form dinamis untuk delete
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '/settings/table-columns/' + columnId;
         form.style.display = 'none';
         
-        // Add CSRF token
         const csrfToken = document.querySelector('meta[name="csrf-token"]');
         if (csrfToken) {
             const csrfInput = document.createElement('input');
@@ -731,230 +664,17 @@
             form.appendChild(csrfInput);
         }
         
-        // Add method field
         const methodInput = document.createElement('input');
         methodInput.type = 'hidden';
         methodInput.name = '_method';
         methodInput.value = 'DELETE';
         form.appendChild(methodInput);
         
-        // Submit form
         document.body.appendChild(form);
         form.submit();
     }
 
-    /**
-     * Validasi form sebelum submit
-     */
-    function validateForm(formData, isEdit = false) {
-        const errors = [];
-        
-        // Validasi nama
-        const name = formData.get('name');
-        if (!name || name.trim().length === 0) {
-            errors.push('Nama kolom wajib diisi');
-        }
-        
-        // Validasi tipe
-        const type = formData.get('type');
-        if (!type) {
-            errors.push('Tipe data wajib dipilih');
-        }
-        
-        // Validasi order
-        const order = formData.get('order');
-        if (order === null || order < 0) {
-            errors.push('Urutan harus angka positif');
-        }
-        
-        // Validasi enum options
-        if (type === 'enum') {
-            const enumValues = formData.getAll('options[values][]');
-            const validEnumValues = enumValues.filter(value => value && value.trim());
-            
-            if (validEnumValues.length === 0) {
-                errors.push('Minimal harus ada 1 pilihan untuk tipe enum');
-            }
-            
-            // Check duplicate values
-            const uniqueValues = [...new Set(validEnumValues.map(v => v.trim().toLowerCase()))];
-            if (uniqueValues.length !== validEnumValues.length) {
-                errors.push('Pilihan enum tidak boleh ada yang sama');
-            }
-        }
-        
-        return errors;
-    }
-
-    /**
-     * Handle ADD form submit
-     */
-    function handleAddFormSubmit(e) {
-        e.preventDefault();
-        
-        const submitBtn = document.getElementById('addSubmitBtn');
-        if (!submitBtn) return;
-        
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
-        submitBtn.disabled = true;
-        
-        const formData = new FormData();
-        const form = this;
-        
-        // Add CSRF token
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (csrfToken) {
-            formData.append('_token', csrfToken.getAttribute('content'));
-        }
-        
-        // Add all form fields
-        formData.append('name', form.name.value.trim());
-        formData.append('type', form.type.value);
-        formData.append('order', form.order.value || 0);
-        
-        // Handle checkboxes - kirim 1 atau 0
-        formData.append('is_required', form.is_required.checked ? '1' : '0');
-        formData.append('is_searchable', form.is_searchable.checked ? '1' : '0');
-        formData.append('is_sortable', form.is_sortable.checked ? '1' : '0');
-        formData.append('show_in_list', form.show_in_list.checked ? '1' : '0');
-        
-        // Handle enum options
-        const enumInputs = form.querySelectorAll('input[name="options[values][]"]');
-        enumInputs.forEach(input => {
-            if (input.value && input.value.trim()) {
-                formData.append('options[values][]', input.value.trim());
-            }
-        });
-        
-        // Validasi form
-        const validationErrors = validateForm(formData, false);
-        if (validationErrors.length > 0) {
-            showAlert('error', validationErrors.join('<br>'));
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-            return;
-        }
-        
-        // Submit
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                showAlert('success', 'Kolom berhasil ditambahkan');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            } else {
-                return response.json().then(data => {
-                    throw new Error(data.message || 'Gagal menambah kolom');
-                });
-            }
-        })
-        .catch(error => {
-            showAlert('error', error.message || 'Terjadi kesalahan saat menambah kolom');
-            console.error('Error:', error);
-        })
-        .finally(() => {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        });
-    }
-
-    /**
-     * Handle EDIT form submit
-     */
-    function handleEditFormSubmit(e) {
-        e.preventDefault();
-        
-        const submitBtn = document.getElementById('editSubmitBtn');
-        if (!submitBtn) return;
-        
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengupdate...';
-        submitBtn.disabled = true;
-        
-        const formData = new FormData();
-        const form = this;
-        
-        // Add CSRF token
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (csrfToken) {
-            formData.append('_token', csrfToken.getAttribute('content'));
-        }
-        
-        // Add method
-        formData.append('_method', 'PUT');
-        
-        // Add all form fields
-        formData.append('name', form.name.value.trim());
-        formData.append('type', form.type.value);
-        formData.append('order', form.order.value || 0);
-        
-        // Handle checkboxes - kirim 1 atau 0
-        formData.append('is_required', form.is_required.checked ? '1' : '0');
-        formData.append('is_searchable', form.is_searchable.checked ? '1' : '0');
-        formData.append('is_sortable', form.is_sortable.checked ? '1' : '0');
-        formData.append('show_in_list', form.show_in_list.checked ? '1' : '0');
-        formData.append('is_active', form.is_active.checked ? '1' : '0');
-        
-        // Handle enum options
-        const enumInputs = form.querySelectorAll('input[name="options[values][]"]');
-        enumInputs.forEach(input => {
-            if (input.value && input.value.trim()) {
-                formData.append('options[values][]', input.value.trim());
-            }
-        });
-        
-        // Validasi form
-        const validationErrors = validateForm(formData, true);
-        if (validationErrors.length > 0) {
-            showAlert('error', validationErrors.join('<br>'));
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-            return;
-        }
-        
-        // Submit
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                showAlert('success', 'Kolom berhasil diupdate');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            } else {
-                return response.json().then(data => {
-                    throw new Error(data.message || 'Gagal mengupdate kolom');
-                });
-            }
-        })
-        .catch(error => {
-            showAlert('error', error.message || 'Terjadi kesalahan saat mengupdate kolom');
-            console.error('Error:', error);
-        })
-        .finally(() => {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        });
-    }
-
-    /**
-     * Event listeners untuk close modal
-     */
-    function initializeEventListeners() {
-        // Close modal ketika klik di luar
+    document.addEventListener('DOMContentLoaded', function() {
         window.onclick = function(event) {
             const modals = ['addColumnModal', 'editColumnModal'];
             modals.forEach(modalId => {
@@ -965,50 +685,36 @@
             });
         }
 
-        // Close modal dengan ESC key
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 closeAllModals();
             }
         });
-    }
-
-    /**
-     * Initialize pada saat page load
-     */
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM Content Loaded - Initializing...');
         
-        // Initialize event listeners
-        initializeEventListeners();
-        
-        // Initialize enum options untuk add form
         toggleEnumOptions('add');
         
-        // Bind form submit events
         const addForm = document.getElementById('addColumnForm');
-        if (addForm) {
-            addForm.addEventListener('submit', handleAddFormSubmit);
-            console.log('Add form event listener attached');
-        }
-
         const editForm = document.getElementById('editColumnForm');
-        if (editForm) {
-            editForm.addEventListener('submit', handleEditFormSubmit);
-            console.log('Edit form event listener attached');
+        
+        if (addForm) {
+            addForm.onsubmit = function() {
+                const btn = document.getElementById('addSubmitBtn');
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+                    btn.disabled = true;
+                }
+            }
         }
         
-        // Auto-dismiss existing alerts setelah 4 detik
-        const existingAlerts = document.querySelectorAll('.alert:not(.alert-auto-dismiss)');
-        existingAlerts.forEach(alert => {
-            setTimeout(() => {
-                if (alert && alert.parentNode) {
-                    alert.remove();
+        if (editForm) {
+            editForm.onsubmit = function() {
+                const btn = document.getElementById('editSubmitBtn');
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengupdate...';
+                    btn.disabled = true;
                 }
-            }, 4000);
-        });
-        
-        console.log('JavaScript initialization complete');
+            }
+        }
     });
 </script>
 
