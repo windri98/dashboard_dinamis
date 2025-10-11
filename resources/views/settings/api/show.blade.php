@@ -219,7 +219,13 @@
                                 <tbody>
                                     @foreach($apiEndpoint->accessLogs as $log)
                                     <tr>
-                                        <td>{{ $log->created_at->format('d/m H:i:s') }}</td>
+                                        <td>
+                                            @if($log->created_at instanceof \Carbon\Carbon)
+                                                {{ $log->created_at->format('d/m H:i:s') }}
+                                            @else
+                                                {{ \Carbon\Carbon::parse($log->created_at)->format('d/m H:i:s') }}
+                                            @endif
+                                        </td>
                                         <td><code>{{ $log->ip_address }}</code></td>
                                         <td>
                                             <span class="badge 

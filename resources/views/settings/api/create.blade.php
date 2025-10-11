@@ -21,13 +21,26 @@
                                 <div class="mb-3">
                                     <label for="name" class="form-label">Nama API <span class="text-danger">*</span></label>
                                     <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror" 
-                                           value="{{ old('name') }}" required>
+                                           value="{{ old('name') }}" required onkeyup="generateSlug()">
                                     @error('name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
                             <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="slug" class="form-label">Slug <span class="text-danger">*</span></label>
+                                    <input type="text" name="slug" id="slug" class="form-control @error('slug') is-invalid @enderror" 
+                                           value="{{ old('slug') }}" required>
+                                    @error('slug')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <div class="form-text">URL: <strong id="slug-preview">{{ url('/settings/api/') }}/</strong></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
                                 <div class="mb-3">
                                     <label for="method" class="form-label">HTTP Method <span class="text-danger">*</span></label>
                                     <select name="method" id="method" class="form-select @error('method') is-invalid @enderror" required>
@@ -227,6 +240,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             document.getElementById('endpoint').value = endpoint;
         }
+    });
+
+    // Auto-generate slug from name
+    function generateSlug() {
+        const name = document.getElementById('name').value;
+        const slug = name.toLowerCase()
+            .replace(/[^a-z0-9 -]/g, '') // hapus karakter special
+            .replace(/\s+/g, '-')        // ganti spasi dengan dash
+            .replace(/-+/g, '-')         // replace multiple dash dengan single
+            .trim('-');                  // hapus dash di awal/akhir
+        
+        document.getElementById('slug').value = slug;
+        updateSlugPreview(slug);
+    }
+
+    function updateSlugPreview(slug) {
+        const preview = document.getElementById('slug-preview');
+        preview.textContent = '{{ url("/settings/api/") }}/' + (slug || '');
+    }
+
+    // Update slug preview when slug field changes manually
+    document.getElementById('slug').addEventListener('input', function() {
+        updateSlugPreview(this.value);
     });
 
     // Toggle IP section

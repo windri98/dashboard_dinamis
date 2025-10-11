@@ -25,68 +25,27 @@ class DashboardController extends Controller
 
         if ($isSuperAdmin) {
             Log::info("SuperAdmin detected, full access granted", ['role_id' => $userRolesId]);
+            return [Permission::pluck('id')->toArray(), $isSuperAdmin];
+        }
+
+        $userRole = Roles::find($userRolesId);
+        if (!$userRole) {
+            Log::warning("Role not found for user", ['user_id' => auth()->id(), 'role_id' => $userRolesId]);
+            return [[], false];
+        }
+
+        $aksesData = $userRole->akses;
+        
+        // Handle "Full access" case
+        if ($aksesData === 'Full access' || $aksesData === 'full access') {
+            $permissions = Permission::pluck('id')->toArray();
+            Log::info("Full access granted via role", ['permissions_count' => count($permissions)]);
+        } elseif (is_array($aksesData)) {
+            $permissions = array_map('intval', $aksesData);
+            Log::info("User permissions loaded from role", ['permissions' => $permissions]);
         } else {
-            $userRole = Roles::find($userRolesId);
-            if (!$userRole) {
-                Log::warning("Role not found for user", ['user_id' => auth()->id(), 'role_id' => $userRolesId]);
-            } elseif (empty($userRole->akses)) {
-                Log::info("No permissions set for this role", ['role_id' => $userRolesId]);
-            } else {
-                // FIXED: Handle "Full access"
-                if ($userRole->akses === 'Full access' || $userRole->akses === 'full access') {
-                    $permissions = Permission::pluck('id')->toArray();
-                    Log::info("Full access granted", ['permissions_count' => count($permissions)]);
-                } else {
-                    // FIXED: Enhanced JSON parsing
-                    $rawValue = $userRole->akses;
-                    
-                    // Check if it's already an array (Laravel cast)
-                    if (is_array($rawValue)) {
-                        $permissions = array_map('intval', $rawValue);
-                        Log::info("User permissions loaded as array", ['permissions' => $permissions]);
-                    } else {
-                        // Handle string JSON with multiple levels of escaping
-                        $jsonString = $rawValue;
-                        
-                        // Remove outer quotes if present
-                        if (is_string($jsonString) && str_starts_with($jsonString, '"') && str_ends_with($jsonString, '"')) {
-                            $jsonString = substr($jsonString, 1, -1);
-                            // Unescape quotes
-                            $jsonString = str_replace('\\"', '"', $jsonString);
-                        }
-                        
-                        $decoded = json_decode($jsonString, true);
-                        
-                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                            $permissions = array_map('intval', $decoded);
-                            Log::info("User permissions loaded from JSON string", [
-                                'raw' => $rawValue,
-                                'processed' => $jsonString,
-                                'decoded'   => $permissions
-                            ]);
-                        } else {
-                            // Fallback: try to get raw from database
-                            $rawFromDb = $userRole->getRawOriginal('akses');
-                            $decodedFromRaw = json_decode($rawFromDb, true);
-                            
-                            if (is_array($decodedFromRaw)) {
-                                $permissions = array_map('intval', $decodedFromRaw);
-                                Log::info("User permissions loaded from raw database", [
-                                    'raw_db'  => $rawFromDb,
-                                    'decoded' => $permissions
-                                ]);
-                            } else {
-                                $permissions = [];
-                                Log::warning("Failed to parse permissions", [
-                                    'raw_value'  => $rawValue,
-                                    'raw_db'     => $rawFromDb,
-                                    'json_error' => json_last_error_msg()
-                                ]);
-                            }
-                        }
-                    }
-                }
-            }
+            $permissions = [];
+            Log::info("No valid permissions found for role", ['role_id' => $userRolesId, 'akses' => $aksesData]);
         }
 
         return [$permissions, $isSuperAdmin];

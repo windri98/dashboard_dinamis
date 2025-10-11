@@ -28,9 +28,11 @@ class ApiAccessLog extends Model
         'response_status' => 'integer',
         'execution_time' => 'float',
         'request_payload' => 'array',
+        'created_at' => 'datetime',
     ];
 
-    public $timestamps = false;
+    // Custom timestamps since we only use created_at
+    const UPDATED_AT = null;
 
     // Relationships
     public function apiEndpoint()

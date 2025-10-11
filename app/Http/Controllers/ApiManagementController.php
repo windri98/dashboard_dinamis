@@ -43,6 +43,7 @@ class ApiManagementController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
+            'slug' => 'required|string|max:100|unique:api_endpoints',
             'endpoint' => 'required|string|max:255|unique:api_endpoints',
             'method' => 'required|in:GET,POST,PUT,DELETE',
             'table_name' => 'required|string|exists:dynamic_tables,table_name',
@@ -90,6 +91,7 @@ class ApiManagementController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
+            'slug' => 'required|string|max:100|unique:api_endpoints,slug,' . $apiEndpoint->id,
             'endpoint' => 'required|string|max:255|unique:api_endpoints,endpoint,' . $apiEndpoint->id,
             'method' => 'required|in:GET,POST,PUT,DELETE',
             'table_name' => 'required|string|exists:dynamic_tables,table_name',

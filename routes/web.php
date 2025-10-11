@@ -112,3 +112,8 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 });
+
+// Include debug routes if needed
+if (app()->environment(['local', 'staging'])) {
+    require __DIR__ . '/debug.php';
+}

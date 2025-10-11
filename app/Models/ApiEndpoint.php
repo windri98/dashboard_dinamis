@@ -11,6 +11,7 @@ class ApiEndpoint extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'endpoint',
         'method',
         'table_name',
@@ -64,7 +65,53 @@ class ApiEndpoint extends Model
 
     public function scopeByEndpoint($query, $endpoint, $method)
     {
-        return $query->where('endpoint', $endpoint)
-                     ->where('method', $method);
+        // Normalize endpoint - coba dengan dan tanpa trailing slash
+        $endpointWithSlash = rtrim($endpoint, '/') . '/';
+        $endpointWithoutSlash = rtrim($endpoint, '/');
+        
+        return $query->where(function($q) use ($endpointWithSlash, $endpointWithoutSlash) {
+                $q->where('endpoint', $endpointWithSlash)
+                  ->orWhere('endpoint', $endpointWithoutSlash);
+            })
+            ->where('method', $method);
+    }
+
+    // Route Model Binding - gunakan slug instead of id
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
+
+    // Auto generate slug saat creating/updating
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->slug)) {
+                $model->slug = static::generateSlug($model->name);
+            }
+        });
+
+        static::updating(function ($model) {
+            if ($model->isDirty('name') && empty($model->slug)) {
+                $model->slug = static::generateSlug($model->name);
+            }
+        });
+    }
+
+    // Generate slug from name
+    public static function generateSlug($name, $id = null)
+    {
+        $slug = \Illuminate\Support\Str::slug($name);
+        $originalSlug = $slug;
+        $counter = 1;
+
+        while (static::where('slug', $slug)->where('id', '!=', $id)->exists()) {
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 }

@@ -18,14 +18,3 @@ Route::middleware('api.guard')->group(function () {
     Route::put('/dynamic/{tableName}/{id}', [DynamicApiController::class, 'update']);
     Route::delete('/dynamic/{tableName}/{id}', [DynamicApiController::class, 'destroy']);
 });
-
-// Static API Routes (if needed)
-// Route::middleware('api.guard')->group(function () {
-//     Route::get('/users', [UserController::class, 'index']);
-//     Route::post('/users', [UserController::class, 'store']);
-//     Route::put('/users/{id}', [UserController::class, 'update']);
-//     Route::delete('/users/{id}', [UserController::class, 'destroy']);
-// });
-
-// Specific endpoint with ID (if needed for special cases)
-// Route::middleware('api.guard:1')->get('/users/special', [UserController::class, 'specialEndpoint']);
