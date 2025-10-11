@@ -104,7 +104,7 @@
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $user->nama }}</td>
                                 <td>{{ $user->username }}</td>
-                                <td>{{ $user->roles->role}}</td>
+                                <td>{{ $user->role->role}}</td>
                                 <td class="action-cell">
                                     <div class="action-buttons">
                                         <form action="#">

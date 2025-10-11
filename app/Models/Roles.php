@@ -23,21 +23,10 @@ class Roles extends Model
     //     return in_array($permissionId, $permissions);
     // }
     
-    // Model Role
+    // Model Role - Relasi ke User
     public function users()
     {
         return $this->hasMany(User::class , 'role_id');
-    }
-
-        // Model User
-    public function role()
-    {
-        return $this->hasMany(User::class , 'role_id');
-    }
-
-    public function permission()
-    {
-        return $this->belongsTo(Roles::class, 'role_id');
     }
 
 }

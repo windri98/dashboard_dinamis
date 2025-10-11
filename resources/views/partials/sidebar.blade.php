@@ -75,7 +75,7 @@
         }
 
         $permission = Permission::whereHas('menu', fn($q) => $q->where('permission_key', $menuKey))
-            ->whereHas('action', fn($q) => $q->where('nama', $actionKey))
+            ->whereHas('action', fn($q) => $q->where('slug', $actionKey))
             ->first();
 
         if (!$permission) {
@@ -129,9 +129,9 @@
             return true;
         }
 
-        // Cek permission yang spesifik untuk menu_item ini dengan action View/Lihat
+        // Cek permission yang spesifik untuk menu_item ini dengan action read
         $itemPermissions = Permission::where('menu_item_id', $menuItemId)
-            ->whereHas('action', fn($q) => $q->where('nama', 'View/Lihat'))
+            ->whereHas('action', fn($q) => $q->where('slug', 'read'))
             ->pluck('id')
             ->toArray();
         
@@ -183,6 +183,8 @@
     </div>
     <nav class="sidebar-menu">
         <div class="menu-title">Menu Utama</div>
+        
+        {{-- Dashboard/Beranda accessible for all authenticated users --}}
         <div class="menu-item {{ request()->is('dashboard') ? 'active' : '' }}">
             <a href="/dashboard" style="text-decoration: none; color: inherit;">
                 <i class="fas fa-home"></i>
@@ -192,71 +194,90 @@
 
         <!-- Dynamic Main Menus -->
         @foreach($dynamicMainMenus as $menu)
-            <div class="menu-item dropdown">
-                <div class="dropdown-header">
-                    <i class="{{ $menu->icon }}"></i>
-                    <span class="menu-text">{{ $menu->name }}</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </div>
-                <div class="dropdown-content">
-                    @forelse($menu->activeItems as $item)
-                        @php
-                            // FIXED: Check menu item permission dengan prioritas bertingkat
-                            $hasItemAccess = $isSuperAdmin;
-                            
-                            if (!$hasItemAccess) {
-                                // Prioritas 1: Cek permission spesifik untuk menu_item_id
-                                $hasItemAccess = hasMenuItemAccess($item->id, $permissionIds, $isSuperAdmin);
-                                
-                                // Prioritas 2: Fallback ke permission_key menu item jika ada
-                                if (!$hasItemAccess && $item->permission_key) {
-                                    $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
-                                }
-                                
-                                // Prioritas 3: Fallback ke parent menu permission
-                                if (!$hasItemAccess) {
-                                    $hasItemAccess = hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin);
-                                }
-                            }
-
-                            \Log::info("Menu item final access decision", [
-                                'menu_name' => $menu->name,
-                                'item_name' => $item->name,
-                                'item_id' => $item->id,
-                                'has_access' => $hasItemAccess
-                            ]);
-                        @endphp
+            @php
+                // Count accessible items for this menu
+                $accessibleItemsCount = 0;
+                foreach($menu->activeItems as $item) {
+                    $hasItemAccess = $isSuperAdmin;
+                    
+                    if (!$hasItemAccess) {
+                        $hasItemAccess = hasMenuItemAccess($item->id, $permissionIds, $isSuperAdmin);
                         
-                        @if($hasItemAccess)
-                            <div class="sub-menu-item">
-                                <a href="{{ $item->url }}">
-                                    <i class="{{ $item->icon }}"></i>
-                                    <span class="menu-text">{{ $item->name }}</span>
-                                    @if($item->link_type === 'table' && $item->table_name)
-                                        <small style="color: rgba(255,255,255,0.7); font-size: 11px; margin-left: 5px;">
-                                            ({{ $item->table_name }})
-                                        </small>
-                                    @endif
-                                </a>
-                            </div>
-                        @endif
-                    @empty
-                        <div class="sub-menu-item">
-                            <a href="#" style="color: #999; font-style: italic;">
-                                <i class="fas fa-info-circle"></i>
-                                <span class="menu-text">Belum ada sub menu</span>
-                            </a>
-                        </div>
-                    @endforelse
+                        if (!$hasItemAccess && $item->permission_key) {
+                            $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
+                        }
+                        
+                        if (!$hasItemAccess) {
+                            $hasItemAccess = hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin);
+                        }
+                    }
+                    
+                    if ($hasItemAccess) {
+                        $accessibleItemsCount++;
+                    }
+                }
+            @endphp
+            
+            @if($accessibleItemsCount > 0)
+                <div class="menu-item dropdown">
+                    <div class="dropdown-header">
+                        <i class="{{ $menu->icon }}"></i>
+                        <span class="menu-text">{{ $menu->name }}</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </div>
+                    <div class="dropdown-content">
+                        @foreach($menu->activeItems as $item)
+                            @php
+                                // FIXED: Check menu item permission dengan prioritas bertingkat
+                                $hasItemAccess = $isSuperAdmin;
+                                
+                                if (!$hasItemAccess) {
+                                    // Prioritas 1: Cek permission spesifik untuk menu_item_id
+                                    $hasItemAccess = hasMenuItemAccess($item->id, $permissionIds, $isSuperAdmin);
+                                    
+                                    // Prioritas 2: Fallback ke permission_key menu item jika ada
+                                    if (!$hasItemAccess && $item->permission_key) {
+                                        $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
+                                    }
+                                    
+                                    // Prioritas 3: Fallback ke parent menu permission
+                                    if (!$hasItemAccess) {
+                                        $hasItemAccess = hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin);
+                                    }
+                                }
+
+                                \Log::info("Menu item final access decision", [
+                                    'menu_name' => $menu->name,
+                                    'item_name' => $item->name,
+                                    'item_id' => $item->id,
+                                    'has_access' => $hasItemAccess
+                                ]);
+                            @endphp
+                            
+                            @if($hasItemAccess)
+                                <div class="sub-menu-item">
+                                    <a href="{{ $item->url }}">
+                                        <i class="{{ $item->icon }}"></i>
+                                        <span class="menu-text">{{ $item->name }}</span>
+                                        @if($item->link_type === 'table' && $item->table_name)
+                                            <small style="color: rgba(255,255,255,0.7); font-size: 11px; margin-left: 5px;">
+                                                ({{ $item->table_name }})
+                                            </small>
+                                        @endif
+                                    </a>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
-            </div>
+            @endif
         @endforeach
 
         <!-- Pengaturan Section -->
         <div class="menu-title">Pengaturan</div>
         
         <!-- Static Settings Menu -->
-        @if($isSuperAdmin || hasPermission('settings', 'View/Lihat', $permissionIds, $isSuperAdmin))
+        @if($isSuperAdmin || hasPermission('settings', 'read', $permissionIds, $isSuperAdmin))
         <div class="menu-item dropdown">
             <div class="dropdown-header">
                 <i class="fa fa-cogs" aria-hidden="true"></i>
@@ -265,7 +286,7 @@
             </div>
 
             <div class="dropdown-content">
-                @if($isSuperAdmin || hasPermission('dynamic_menu', 'View/Lihat', $permissionIds, $isSuperAdmin))
+                @if($isSuperAdmin || hasPermission('menus', 'read', $permissionIds, $isSuperAdmin))
                 <div class="sub-menu-item">
                     <a href="{{ route('settings.dynamic-menus.index') }}">
                         <i class="fa fa-bars" aria-hidden="true"></i>
@@ -274,7 +295,7 @@
                 </div>
                 @endif
 
-                @if($isSuperAdmin || hasPermission('dynamic_table', 'View/Lihat', $permissionIds, $isSuperAdmin))
+                @if($isSuperAdmin || hasPermission('tables', 'read', $permissionIds, $isSuperAdmin))
                 <div class="sub-menu-item">
                     <a href="{{ route('settings.dynamic-tables.index') }}">
                         <i class="fa fa-table" aria-hidden="true"></i>
@@ -283,9 +304,9 @@
                 </div>
                 @endif
 
-                @if($isSuperAdmin || hasPermission('api_management', 'View/Lihat', $permissionIds, $isSuperAdmin))
+                @if($isSuperAdmin || hasPermission('permissions', 'read', $permissionIds, $isSuperAdmin))
                 <div class="sub-menu-item">
-                    <a href="#" style="display: flex; align-items: center; gap: 8px;">
+                    <a href="{{ route('settings.api.index') }}" style="display: flex; align-items: center; gap: 8px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16.694 13.716a5.277 5.277 0 0 0 5.366-5.187a5.28 5.28 0 0 0-5.366-5.186c-.454 0-.906.055-1.347.165A4.93 4.93 0 0 0 10.882.75a4.855 4.855 0 0 0-4.9 4.342a4.38 4.38 0 0 0-4.043 4.3a4.4 4.4 0 0 0 4.471 4.322zm3.551 9.534v-6.534m-1.307 0h2.613m-2.613 6.534h2.613m-10.454 0v-2.614m.003 0h1.96a1.96 1.96 0 1 0 0-3.92H11.1zM1.949 23.25l.737-4.92a1.9 1.9 0 0 1 3.752 0l.738 4.92m-4.884-2.287h4.541"/></svg>
                         <span class="menu-text">Kelola API</span>
                     </a>
@@ -297,59 +318,78 @@
         
         <!-- Dynamic Settings Menus -->
         @foreach($dynamicSettingsMenus as $menu)
-            <div class="menu-item dropdown">
-                <div class="dropdown-header">
-                    <i class="{{ $menu->icon }}"></i>
-                    <span class="menu-text">{{ $menu->name }}</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </div>
-                <div class="dropdown-content">
-                    @forelse($menu->activeItems as $item)
-                        @php
-                            // FIXED: Check menu item permission dengan prioritas bertingkat
-                            $hasItemAccess = $isSuperAdmin;
-                            
-                            if (!$hasItemAccess) {
-                                // Prioritas 1: Cek permission spesifik untuk menu_item_id
-                                $hasItemAccess = hasMenuItemAccess($item->id, $permissionIds, $isSuperAdmin);
-                                
-                                // Prioritas 2: Fallback ke permission_key menu item jika ada
-                                if (!$hasItemAccess && $item->permission_key) {
-                                    $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
-                                }
-                                
-                                // Prioritas 3: Fallback ke parent menu permission
-                                if (!$hasItemAccess) {
-                                    $hasItemAccess = hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin);
-                                }
-                            }
-                        @endphp
+            @php
+                // Count accessible items for this menu
+                $accessibleItemsCount = 0;
+                foreach($menu->activeItems as $item) {
+                    $hasItemAccess = $isSuperAdmin;
+                    
+                    if (!$hasItemAccess) {
+                        $hasItemAccess = hasMenuItemAccess($item->id, $permissionIds, $isSuperAdmin);
                         
-                        @if($hasItemAccess)
-                            <div class="sub-menu-item">
-                                <a href="{{ $item->url }}">
-                                    <i class="{{ $item->icon }}"></i>
-                                    <span class="menu-text">{{ $item->name }}</span>
-                                </a>
-                            </div>
-                        @endif
-                    @empty
-                        <div class="sub-menu-item">
-                            <a href="#" style="color: #999; font-style: italic;">
-                                <i class="fas fa-info-circle"></i>
-                                <span class="menu-text">Belum ada sub menu</span>
-                            </a>
-                        </div>
-                    @endforelse
+                        if (!$hasItemAccess && $item->permission_key) {
+                            $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
+                        }
+                        
+                        if (!$hasItemAccess) {
+                            $hasItemAccess = hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin);
+                        }
+                    }
+                    
+                    if ($hasItemAccess) {
+                        $accessibleItemsCount++;
+                    }
+                }
+            @endphp
+            
+            @if($accessibleItemsCount > 0)
+                <div class="menu-item dropdown">
+                    <div class="dropdown-header">
+                        <i class="{{ $menu->icon }}"></i>
+                        <span class="menu-text">{{ $menu->name }}</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </div>
+                    <div class="dropdown-content">
+                        @foreach($menu->activeItems as $item)
+                            @php
+                                // FIXED: Check menu item permission dengan prioritas bertingkat
+                                $hasItemAccess = $isSuperAdmin;
+                                
+                                if (!$hasItemAccess) {
+                                    // Prioritas 1: Cek permission spesifik untuk menu_item_id
+                                    $hasItemAccess = hasMenuItemAccess($item->id, $permissionIds, $isSuperAdmin);
+                                    
+                                    // Prioritas 2: Fallback ke permission_key menu item jika ada
+                                    if (!$hasItemAccess && $item->permission_key) {
+                                        $hasItemAccess = hasMenuAccess($item->permission_key, $permissionIds, $isSuperAdmin);
+                                    }
+                                    
+                                    // Prioritas 3: Fallback ke parent menu permission
+                                    if (!$hasItemAccess) {
+                                        $hasItemAccess = hasMenuAccess($menu->permission_key, $permissionIds, $isSuperAdmin);
+                                    }
+                                }
+                            @endphp
+                            
+                            @if($hasItemAccess)
+                                <div class="sub-menu-item">
+                                    <a href="{{ $item->url }}">
+                                        <i class="{{ $item->icon }}"></i>
+                                        <span class="menu-text">{{ $item->name }}</span>
+                                    </a>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
-            </div>
+            @endif
         @endforeach
 
         <!-- Management Menu (Roles & Users) -->
         @php
             // Check if user has any management permissions
-            $hasRoleAccess = $isSuperAdmin || hasPermission('roles', 'View/Lihat', $permissionIds, $isSuperAdmin);
-            $hasUserAccess = $isSuperAdmin || hasPermission('users', 'View/Lihat', $permissionIds, $isSuperAdmin);
+            $hasRoleAccess = $isSuperAdmin || hasPermission('roles', 'read', $permissionIds, $isSuperAdmin);
+            $hasUserAccess = $isSuperAdmin || hasPermission('users', 'read', $permissionIds, $isSuperAdmin);
             $hasManagementAccess = $hasRoleAccess || $hasUserAccess;
         @endphp
 

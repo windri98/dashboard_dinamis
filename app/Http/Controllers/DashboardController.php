@@ -108,7 +108,7 @@ class DashboardController extends Controller
                 $q->where('permission_key', $menuKey);
             })
             ->whereHas('action', function($q) use ($actionKey) {
-                $q->where('nama', $actionKey);
+                $q->where('slug', $actionKey);
             })
             ->first();
             
@@ -164,10 +164,10 @@ class DashboardController extends Controller
         [$permissionIds, $isSuperAdmin] = $this->getUserPermissions();
         
         $permissions = [
-            'create' => $isSuperAdmin || $this->hasPermission($permissionKey, 'Create/Tambah'),
-            'read' => $isSuperAdmin || $this->hasPermission($permissionKey, 'View/Lihat'),
-            'update' => $isSuperAdmin || $this->hasPermission($permissionKey, 'Edit/Update'),
-            'delete' => $isSuperAdmin || $this->hasPermission($permissionKey, 'Delete/Hapus'),
+            'create' => $isSuperAdmin || $this->hasPermission($permissionKey, 'create'),
+            'read' => $isSuperAdmin || $this->hasPermission($permissionKey, 'read'),
+            'update' => $isSuperAdmin || $this->hasPermission($permissionKey, 'edit'),
+            'delete' => $isSuperAdmin || $this->hasPermission($permissionKey, 'delete'),
         ];
 
         Log::info("Table permissions calculated", [
@@ -315,7 +315,7 @@ class DashboardController extends Controller
         $debugInfo = [
             'user_info' => [
                 'id' => $user->id,
-                'name' => $user->name,
+                'nama' => $user->nama,
                 'role_id' => $user->role_id,
                 'is_super_admin' => $isSuperAdmin
             ],
@@ -328,11 +328,11 @@ class DashboardController extends Controller
 
         // Get role info
         if ($user->role_id) {
-            $role = Roles::find($user->role_id); // FIXED: Role bukan Roles
+            $role = Roles::find($user->role_id);
             if ($role) {
                 $debugInfo['role_info'] = [
                     'id' => $role->id,
-                    'nama' => $role->nama,
+                    'role' => $role->role,
                     'akses_raw' => $role->akses,
                     'akses_type' => gettype($role->akses),
                     'akses_raw_from_db' => $role->getRawOriginal('akses')

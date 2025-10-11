@@ -189,11 +189,11 @@ class RolesController extends Controller
                 }
                 
                 // Tambahkan info action name ke permission
-                $permission->action_name = $permission->action->name ?? 'Unknown Action';
+                $permission->action_name = $permission->action->nama ?? 'Unknown Action';
                 $grouped[$menuName]['menu_items'][$menuItemName]['permissions'][] = $permission;
             } else {
                 // Permission langsung untuk menu
-                $permission->action_name = $permission->action->name ?? 'Unknown Action';
+                $permission->action_name = $permission->action->nama ?? 'Unknown Action';
                 $grouped[$menuName]['menu_permissions'][] = $permission;
             }
         }
@@ -272,11 +272,11 @@ class RolesController extends Controller
                                 'id' => $permission->id,
                                 'menu' => $permission->menu->name ?? 'Unknown',
                                 'menu_item' => $permission->menuItem->name ?? null,
-                                'action' => $permission->action->name ?? 'Unknown',
+                                'action' => $permission->action->nama ?? 'Unknown',
                                 'full_name' => sprintf('%s%s - %s', 
                                     $permission->menu->name ?? 'Unknown',
                                     $permission->menuItem ? ' > ' . $permission->menuItem->name : '',
-                                    $permission->action->name ?? 'Unknown'
+                                    $permission->action->nama ?? 'Unknown'
                                 )
                             ];
                         });

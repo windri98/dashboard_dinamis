@@ -12,6 +12,7 @@ class DynamicTable extends Model
     protected $fillable = [
         'name',
         'table_name',
+        'permission_key',
         'description',
         'is_active'
     ];

@@ -47,7 +47,7 @@ class User extends Authenticatable
         ];
     }
     
-    public function roles()
+    public function role()
     {
         return $this->belongsTo(Roles::class, 'role_id');
     }
@@ -56,7 +56,7 @@ class User extends Authenticatable
     public function permissions()
     {
         if ($this->role) {
-            return $this->role->permissions;
+            return $this->role->permissions ?? collect([]);
         }
 
         return collect([]);
@@ -207,6 +207,7 @@ class User extends Authenticatable
     //     return true;
     // }
 
-    public $timestamps = false;
+    // Remove this line since migration uses timestamps
+    // public $timestamps = false;
 
 }

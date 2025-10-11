@@ -21,7 +21,7 @@
             <img src="/assets/image/png-clipart-google-contacts-mobile-app-contact-manager-app-store-android-application-package-email-miscellaneous-blue-thumbnail.png" alt="Avatar" class="avatar">
             <div class="user-info">
             <p class="username">{{ Auth::user()->username }}</p>
-            <p class="role">{{ Auth::user()->roles->role }}</p>
+            <p class="role">{{ Auth::user()->role->role }}</p>
             </div>
             <i class="fas fa-caret-down dropdown-icon"></i> <!-- Dropdown indicator -->
 

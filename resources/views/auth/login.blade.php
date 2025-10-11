@@ -33,6 +33,15 @@
                     </div>
                     <button type="submit" class="submit-btn">Login</button>
                 </form>
+                
+                <!-- Test Credentials Info -->
+                <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 12px; color: #6c757d;">
+                    <strong>Test Credentials:</strong><br>
+                    • admin / admin123<br>
+                    • user / user123<br>
+                    • Rudalpolo / Rudalpolo011
+                </div>
+                
                 @if(session('error'))
                     <div class="alert alert-danger" style="margin-top:10px;">
                         {{ session('error') }}
