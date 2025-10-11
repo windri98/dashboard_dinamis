@@ -201,7 +201,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save"></i> Update API Endpoint
                         </button>
-                        <a href="{{ route('settings.api.index') }}" class="btn btn-secondary">
+                        <a href="{{ route('settings.api.index') }}" class="back-button">
                             <i class="fas fa-arrow-left"></i> Kembali
                         </a>
                     </div>

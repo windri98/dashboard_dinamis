@@ -21,7 +21,7 @@
                                 <div class="mb-3">
                                     <label for="name" class="form-label">Nama API <span class="text-danger">*</span></label>
                                     <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror" 
-                                           value="{{ old('name') }}" required onkeyup="generateSlug()">
+                                        value="{{ old('name') }}" required onkeyup="generateSlug()">
                                     @error('name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -31,7 +31,7 @@
                                 <div class="mb-3">
                                     <label for="slug" class="form-label">Slug <span class="text-danger">*</span></label>
                                     <input type="text" name="slug" id="slug" class="form-control @error('slug') is-invalid @enderror" 
-                                           value="{{ old('slug') }}" required>
+                                        value="{{ old('slug') }}" required>
                                     @error('slug')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror

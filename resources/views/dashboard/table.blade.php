@@ -38,60 +38,6 @@
         <input type="hidden" name="per_page" value="{{ request('per_page', 15) }}">
     </form>
     
-
-    {{-- <div class="row mb-3">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <form method="GET" action="{{ route('dashboard.table', $dynamicTable->id) }}" class="d-flex flex-wrap align-items-end gap-3">
-                        <div class="flex-grow-1">
-                            <label for="search" class="form-label">Pencarian</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="search" name="search"
-                                    value="{{ request('search') }}" placeholder="Cari data...">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="col-md-auto">
-                            <label for="sort" class="form-label">Urutkan</label>
-                            <select name="sort" id="sort" class="form-select">
-                                <option value="">-- Pilih Kolom --</option>
-                                @foreach($dynamicTable->activeColumns->where('is_sortable', true) as $column)
-                                    <option value="{{ $column->column_name }}"
-                                        {{ request('sort') == $column->column_name ? 'selected' : '' }}>
-                                        {{ $column->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="col-md-auto">
-                            <label for="direction" class="form-label">Arah</label>
-                            <select name="direction" id="direction" class="form-select">
-                                <option value="asc" {{ request('direction') == 'asc' ? 'selected' : '' }}>A-Z</option>
-                                <option value="desc" {{ request('direction') == 'desc' ? 'selected' : '' }}>Z-A</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-auto">
-                            <label class="form-label">Filter Tanggal</label>
-                            <div class="d-flex gap-2">
-                                <input type="date" class="form-control" name="date_from" value="{{ request('date_from') }}" placeholder="Dari tanggal">
-                                <span class="align-self-center">s/d</span>
-                                <input type="date" class="form-control" name="date_to" value="{{ request('date_to') }}" placeholder="Sampai tanggal">
-                            </div>
-                        </div>
-                        
-                        <input type="hidden" name="per_page" value="{{ request('per_page', 15) }}">
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div> --}}
-    
     <div class="row">
         <div class="col-12">
             <div class="table-responsive">

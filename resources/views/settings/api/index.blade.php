@@ -21,9 +21,9 @@
                         </a>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="table-container">
                     @if($apiEndpoints->count() > 0)
-                        <div class="table-responsive">
+                        <div class="roles-table">
                             <table class="table table-bordered table-striped">
                                 <thead class="table-dark">
                                     <tr>
@@ -105,18 +105,26 @@
                                         </td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <a href="{{ route('settings.api.show', $api) }}" class="btn btn-info btn-sm" title="View Details">
-                                                    <i class="fas fa-eye"></i>
+                                                <a href="{{ route('settings.api.show', $api) }}" class="btn btn-sm btn-view" title="View Details">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle>
+                                                </svg>
                                                 </a>
-                                                <a href="{{ route('settings.api.edit', $api) }}" class="btn btn-warning btn-sm" title="Edit">
-                                                    <i class="fas fa-edit"></i>
+                                                <a href="{{ route('settings.api.edit', $api) }}" class="btn btn-sm btn-primary" title="Edit">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                </svg>
                                                 </a>
                                                 <form action="{{ route('settings.api.destroy', $api) }}" method="POST" style="display: inline;">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger btn-sm" 
+                                                    <button type="submit" class="btn btn-sm btn-danger" 
                                                             onclick="return confirm('Hapus API endpoint ini?')" title="Delete">
-                                                        <i class="fas fa-trash"></i>
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                        </svg>
                                                     </button>
                                                 </form>
                                             </div>

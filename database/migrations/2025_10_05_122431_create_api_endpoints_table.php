@@ -14,8 +14,10 @@ return new class extends Migration
         Schema::create('api_endpoints', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100);
+            $table->string('slug', 100)->unique();
             $table->string('endpoint', 255);
             $table->enum('method', ['GET', 'POST', 'PUT', 'DELETE']);
+            $table->string('table_name')->nullable();
             $table->foreignId('permission_id')->nullable()->constrained('permissions')->nullOnDelete();
             $table->boolean('is_active')->default(true);
             $table->boolean('use_ip_restriction')->default(false);
@@ -26,6 +28,12 @@ return new class extends Migration
             $table->integer('rate_limit_period')->default(60);
             $table->text('description')->nullable();
             $table->timestamps();
+            
+            // Indexes
+            $table->index('slug');
+            $table->index('table_name');
+            $table->index('endpoint');
+            $table->index('is_active');
         });
     }
 
