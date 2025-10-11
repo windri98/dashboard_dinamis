@@ -16,6 +16,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Run specific seeders
+        $this->call([
+            ActionSeeder::class,
+        ]);
+        
         // Insert default role
         $role = Roles::firstOrCreate([
             'role' => 'SuperAdmin',
@@ -31,18 +36,5 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('Rudalpolo011'),
             'role_id' => $role->id,
         ]);
-
-        // Actions to insert
-        $actions = [
-            ['slug' => 'view', 'nama' => 'View/Lihat'],
-            ['slug' => 'create', 'nama' => 'Create/Tambah'],
-            ['slug' => 'edit', 'nama' => 'Edit/Update'],
-            ['slug' => 'delete', 'nama' => 'Delete/Hapus'],
-        ];
-
-        // Insert actions secara rapi
-        foreach ($actions as $action) {
-            Action::firstOrCreate(['slug' => $action['slug']], $action);
-        }
     }
 }
