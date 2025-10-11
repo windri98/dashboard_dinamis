@@ -94,6 +94,65 @@
                                                         {{ $row->{$column->column_name} ? \Carbon\Carbon::parse($row->{$column->column_name})->format('d/m/Y') : '-' }}
                                                     @elseif($column->type == 'datetime')
                                                         {{ $row->{$column->column_name} ? \Carbon\Carbon::parse($row->{$column->column_name})->format('d/m/Y H:i') : '-' }}
+                                                    @elseif($column->type == 'image')
+                                                        @if($row->{$column->column_name} && !str_contains($row->{$column->column_name}, 'tmp'))
+                                                            <div class="image-preview-container">
+                                                                @php
+                                                                    $imagePath = str_starts_with($row->{$column->column_name}, 'uploads/') 
+                                                                        ? $row->{$column->column_name} 
+                                                                        : 'uploads/' . $dynamicTable->table_name . '/' . $column->column_name . '/original/' . basename($row->{$column->column_name});
+                                                                @endphp
+                                                                <img src="{{ asset('storage/' . $imagePath) }}" 
+                                                                     alt="Image" 
+                                                                     class="table-image-preview"
+                                                                     data-bs-toggle="modal" 
+                                                                     data-bs-target="#imageModal"
+                                                                     onclick="showImageModal('{{ asset('storage/' . $imagePath) }}', '{{ $column->name }}')"
+                                                                     style="cursor: pointer;">
+                                                                <div class="image-overlay">
+                                                                    <i class="fas fa-expand"></i>
+                                                                </div>
+                                                            </div>
+                                                        @else
+                                                            <span class="text-muted">
+                                                                <i class="fas fa-image"></i> 
+                                                                @if(str_contains($row->{$column->column_name} ?? '', 'tmp'))
+                                                                    Invalid file
+                                                                @else
+                                                                    No image
+                                                                @endif
+                                                            </span>
+                                                        @endif
+                                                    @elseif($column->type == 'file')
+                                                        @if($row->{$column->column_name} && !str_contains($row->{$column->column_name}, 'tmp'))
+                                                            <div class="file-preview-container">
+                                                                @php
+                                                                    $filePath = str_starts_with($row->{$column->column_name}, 'uploads/') 
+                                                                        ? $row->{$column->column_name} 
+                                                                        : 'uploads/' . $dynamicTable->table_name . '/' . $column->column_name . '/' . basename($row->{$column->column_name});
+                                                                    $fileName = basename($row->{$column->column_name});
+                                                                    $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                                                                @endphp
+                                                                <a href="{{ asset('storage/' . $filePath) }}" 
+                                                                   target="_blank" 
+                                                                   class="file-link">
+                                                                    <i class="fas fa-{{ $extension === 'pdf' ? 'file-pdf' : ($extension === 'doc' || $extension === 'docx' ? 'file-word' : ($extension === 'xls' || $extension === 'xlsx' ? 'file-excel' : 'file-alt')) }}"></i>
+                                                                    <span class="file-name">{{ $fileName }}</span>
+                                                                </a>
+                                                                <small class="file-size text-muted d-block">
+                                                                    {{ strtoupper($extension) }}
+                                                                </small>
+                                                            </div>
+                                                        @else
+                                                            <span class="text-muted">
+                                                                <i class="fas fa-file"></i> 
+                                                                @if(str_contains($row->{$column->column_name} ?? '', 'tmp'))
+                                                                    Invalid file
+                                                                @else
+                                                                    No file
+                                                                @endif
+                                                            </span>
+                                                        @endif
                                                     @else
                                                         {{ $row->{$column->column_name} ?? '-' }}
                                                     @endif
@@ -145,11 +204,24 @@
                                                     100
                                                 @elseif($column->type == 'decimal')
                                                     150.75
-                                                @elseif($column->type == 'enum')
+                                                @elseif($column->type == 'image')
+                                                    <div class="sample-image-preview">
+                                                        <div class="sample-image-placeholder">
+                                                            <i class="fas fa-image fa-2x text-muted"></i>
+                                                            <small class="text-muted d-block">Sample Image</small>
+                                                        </div>
+                                                    </div>
+                                                @elseif($column->type == 'file')
+                                                    <div class="sample-file-preview">
+                                                        <i class="fas fa-file-pdf text-danger"></i>
+                                                        <span class="file-name text-muted">sample_document.pdf</span>
+                                                        <small class="file-size text-muted d-block">PDF</small>
+                                                    </div>
+                                                @elseif($column->type == 'select' || $column->type == 'radio' || $column->type == 'checkbox')
                                                     @if(isset($column->options['values']) && count($column->options['values']) > 0)
                                                         {{ $column->options['values'][0] }}
                                                     @else
-                                                        Sample Enum
+                                                        Sample Option
                                                     @endif
                                                 @elseif($column->type == 'text')
                                                     Sample {{ $column->name }} dengan deskripsi panjang...
@@ -265,7 +337,7 @@
 <div class="modal fade" id="addDataModal" tabindex="-1" style="display: none;" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form method="POST" action="{{ route('dashboard.table.store', $dynamicTable->id) }}">
+            <form method="POST" action="{{ route('dashboard.table.store', $dynamicTable->id) }}" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Tambah Data - {{ $dynamicTable->name }}</h5>
@@ -356,6 +428,30 @@
                                             class="form-control {{ $column->is_required ? 'required' : '' }}"
                                             value="{{ old($column->column_name) }}"
                                             {{ $column->is_required ? 'required' : '' }}>
+                                    
+                                    @elseif($column->type == 'file')
+                                        <input type="file" 
+                                            name="{{ $column->column_name }}" 
+                                            id="add_{{ $column->column_name }}" 
+                                            class="form-control {{ $column->is_required ? 'required' : '' }}"
+                                            accept=".pdf,.doc,.docx,.txt,.xlsx,.xls"
+                                            {{ $column->is_required ? 'required' : '' }}>
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-info-circle"></i> 
+                                            Supported formats: PDF, DOC, DOCX, TXT, Excel (Max: 2MB)
+                                        </small>
+                                    
+                                    @elseif($column->type == 'image')
+                                        <input type="file" 
+                                            name="{{ $column->column_name }}" 
+                                            id="add_{{ $column->column_name }}" 
+                                            class="form-control {{ $column->is_required ? 'required' : '' }}"
+                                            accept="image/*"
+                                            {{ $column->is_required ? 'required' : '' }}>
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-info-circle"></i> 
+                                            Supported formats: JPG, PNG, GIF (Max: 2MB). Thumbnail will be auto-generated.
+                                        </small>
                                             
                                     @else
                                         <input type="text" 
@@ -402,7 +498,7 @@
 <div class="modal fade" id="editDataModal" tabindex="-1" style="display: none;" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form method="POST" id="editForm" action="{{ route('dashboard.table.update', [$dynamicTable->id, 'PLACEHOLDER']) }}">
+            <form method="POST" id="editForm" action="{{ route('dashboard.table.update', [$dynamicTable->id, 'PLACEHOLDER']) }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-header">
@@ -490,6 +586,43 @@
                                         id="edit_{{ $column->column_name }}" 
                                         class="form-control {{ $column->is_required ? 'required' : '' }}"
                                         {{ $column->is_required ? 'required' : '' }}>
+                                
+                                @elseif($column->type == 'file')
+                                    <div class="current-file mb-2" id="current_file_{{ $column->column_name }}" style="display: none;">
+                                        <label class="form-label text-muted">Current file:</label>
+                                        <div class="file-current-preview">
+                                            <a href="#" target="_blank" class="current-file-link">
+                                                <i class="fas fa-file"></i>
+                                                <span class="current-file-name"></span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <input type="file" 
+                                        name="{{ $column->column_name }}" 
+                                        id="edit_{{ $column->column_name }}" 
+                                        class="form-control"
+                                        accept=".pdf,.doc,.docx,.txt,.xlsx,.xls">
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> 
+                                        Leave empty to keep current file. Supported: PDF, DOC, DOCX, TXT, Excel (Max: 2MB)
+                                    </small>
+                                
+                                @elseif($column->type == 'image')
+                                    <div class="current-image mb-2" id="current_image_{{ $column->column_name }}" style="display: none;">
+                                        <label class="form-label text-muted">Current image:</label>
+                                        <div class="current-image-preview">
+                                            <img src="#" alt="Current image" class="current-image-thumb" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #e9ecef;">
+                                        </div>
+                                    </div>
+                                    <input type="file" 
+                                        name="{{ $column->column_name }}" 
+                                        id="edit_{{ $column->column_name }}" 
+                                        class="form-control"
+                                        accept="image/*">
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> 
+                                        Leave empty to keep current image. Supported: JPG, PNG, GIF (Max: 2MB)
+                                    </small>
                                         
                                 @else
                                     <input type="text" 
@@ -772,6 +905,42 @@ function loadEditData(id, data) {
                 } else {
                     field.value = '';
                 }
+            } else if (field.type === 'file') {
+                // Handle file fields - show current file if exists
+                const currentFileDiv = document.getElementById('current_file_' + key);
+                if (currentFileDiv && data[key]) {
+                    currentFileDiv.style.display = 'block';
+                    const fileLink = currentFileDiv.querySelector('.current-file-link');
+                    const fileName = currentFileDiv.querySelector('.current-file-name');
+                    
+                    if (fileLink && fileName) {
+                        fileLink.href = '{{ asset("storage/uploads/files/") }}/' + data[key];
+                        fileName.textContent = data[key].split('/').pop();
+                        
+                        // Update icon based on file extension
+                        const icon = fileLink.querySelector('i');
+                        const ext = data[key].split('.').pop().toLowerCase();
+                        icon.className = ext === 'pdf' ? 'fas fa-file-pdf' : 'fas fa-file-alt';
+                    }
+                } else if (currentFileDiv) {
+                    currentFileDiv.style.display = 'none';
+                }
+                // Don't set value for file inputs - they can't be pre-filled
+            } else if (field.accept && field.accept.includes('image')) {
+                // Handle image fields - show current image if exists
+                const currentImageDiv = document.getElementById('current_image_' + key);
+                if (currentImageDiv && data[key]) {
+                    currentImageDiv.style.display = 'block';
+                    const imageThumb = currentImageDiv.querySelector('.current-image-thumb');
+                    
+                    if (imageThumb) {
+                        imageThumb.src = '{{ asset("storage/uploads/images/") }}/' + data[key];
+                        imageThumb.alt = 'Current ' + key;
+                    }
+                } else if (currentImageDiv) {
+                    currentImageDiv.style.display = 'none';
+                }
+                // Don't set value for file inputs - they can't be pre-filled
             } else {
                 field.value = data[key] ?? '';
             }
@@ -874,6 +1043,169 @@ window.showAlert = showAlert;
             searchForm.submit();
         });
     });
+        });
+    });
+
 </script>
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalLabel">Image Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" alt="Preview" class="img-fluid max-height-400">
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* File and Image Preview Styles */
+.image-preview-container {
+    position: relative;
+    display: inline-block;
+}
+
+.table-image-preview {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.table-image-preview:hover {
+    border-color: #007bff;
+    transform: scale(1.05);
+}
+
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 8px;
+}
+
+.image-preview-container:hover .image-overlay {
+    opacity: 1;
+}
+
+.image-overlay i {
+    color: white;
+    font-size: 16px;
+}
+
+.file-preview-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.file-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: #007bff;
+    padding: 6px 12px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    max-width: 200px;
+}
+
+.file-link:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+    text-decoration: none;
+    color: #0056b3;
+}
+
+.file-name {
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+
+.file-size {
+    font-size: 0.75rem;
+    margin-left: 20px;
+}
+
+/* Sample Preview Styles */
+.sample-image-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sample-image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+}
+
+.sample-file-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    opacity: 0.7;
+}
+
+.max-height-400 {
+    max-height: 400px;
+    width: auto;
+}
+
+/* File type specific colors */
+.file-link .fa-file-pdf {
+    color: #dc3545;
+}
+
+.file-link .fa-file-word {
+    color: #2b579a;
+}
+
+.file-link .fa-file-excel {
+    color: #217346;
+}
+
+.file-link .fa-file-alt {
+    color: #6c757d;
+}
+</style>
+
+<script>
+function showImageModal(imageSrc, title) {
+    document.getElementById('modalImage').src = imageSrc;
+    document.getElementById('imageModalLabel').textContent = title || 'Image Preview';
+}
 
 @endsection

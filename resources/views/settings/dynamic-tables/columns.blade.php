@@ -237,10 +237,13 @@
                                 <option value="integer">Angka Bulat (Integer)</option>
                                 <option value="decimal">Angka Desimal (Decimal)</option>
                                 <option value="date">Tanggal (Date)</option>
-                                <option value="time">Waktu (Time)</option>
                                 <option value="datetime">Tanggal & Waktu (DateTime)</option>
                                 <option value="boolean">Ya/Tidak (Boolean)</option>
-                                <option value="enum">Pilihan (Enum)</option>
+                                <option value="select">Pilihan (Select)</option>
+                                <option value="radio">Radio Button</option>
+                                <option value="checkbox">Checkbox</option>
+                                <option value="file">📁 File Upload</option>
+                                <option value="image">🖼️ Image Upload</option>
                             </select>
                         </div>
                     </div>
@@ -365,10 +368,13 @@
                                 <option value="integer">Angka Bulat (Integer)</option>
                                 <option value="decimal">Angka Desimal (Decimal)</option>
                                 <option value="date">Tanggal (Date)</option>
-                                <option value="time">Waktu (Time)</option>
                                 <option value="datetime">Tanggal & Waktu (DateTime)</option>
                                 <option value="boolean">Ya/Tidak (Boolean)</option>
-                                <option value="enum">Pilihan (Enum)</option>
+                                <option value="select">Pilihan (Select)</option>
+                                <option value="radio">Radio Button</option>
+                                <option value="checkbox">Checkbox</option>
+                                <option value="file">📁 File Upload</option>
+                                <option value="image">🖼️ Image Upload</option>
                             </select>
                             <small class="text-muted">Pastikan perubahan tipe data sesuai kebutuhan.</small>
                         </div>
@@ -547,7 +553,7 @@
         
         enumValuesContainer.innerHTML = '';
         
-        if (column.type === 'enum' && column.options && column.options.values && Array.isArray(column.options.values)) {
+        if ((column.type === 'select' || column.type === 'radio' || column.type === 'checkbox') && column.options && column.options.values && Array.isArray(column.options.values)) {
             enumOptionsDiv.classList.remove('d-none');
             
             column.options.values.forEach(function(value) {
@@ -587,7 +593,7 @@
         
         if (!typeSelect || !enumOptions) return;
         
-        if (typeSelect.value === 'enum') {
+        if (typeSelect.value === 'select' || typeSelect.value === 'radio' || typeSelect.value === 'checkbox') {
             enumOptions.classList.remove('d-none');
             
             if (enumWarning && prefix === 'add') {

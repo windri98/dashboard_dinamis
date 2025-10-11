@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test File Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="file"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Dynamic API File Upload</h1>
+    
+    <form id="uploadForm">
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" value="Test User">
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="text" id="email" name="email" value="test@example.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="cv_upload">CV Upload:</label>
+            <input type="file" id="cv_upload" name="cv_upload" accept=".pdf,.doc,.docx">
+        </div>
+        
+        <button type="submit">Upload Data</button>
+    </form>
+    
+    <div id="result" class="result" style="display: none;"></div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('name', document.getElementById('name').value);
+            formData.append('email', document.getElementById('email').value);
+            
+            const fileInput = document.getElementById('cv_upload');
+            if (fileInput.files[0]) {
+                formData.append('cv_upload', fileInput.files[0]);
+            }
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Uploading...';
+            
+            try {
+                const response = await fetch('http://192.168.3.101:8000/api/semua-data/store', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.text();
+                resultDiv.textContent = `Status: ${response.status}\nResponse: ${result}`;
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

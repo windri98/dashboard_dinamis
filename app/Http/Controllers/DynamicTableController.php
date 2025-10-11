@@ -131,7 +131,7 @@ class DynamicTableController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:string,text,integer,decimal,date,time,datetime,boolean,enum',
+            'type' => 'required|in:string,text,integer,decimal,boolean,date,datetime,select,radio,checkbox,file,image',
             'is_required' => 'boolean',
             'is_searchable' => 'boolean',
             'is_sortable' => 'boolean',
@@ -140,7 +140,7 @@ class DynamicTableController extends Controller
             'options' => 'nullable|array',
         ]);
         
-        if ($validated['type'] === 'enum') {
+        if (in_array($validated['type'], ['select', 'radio', 'checkbox'])) {
             $request->validate([
                 'options.values' => 'required|array|min:1',
                 'options.values.*' => 'required|string|max:255',
@@ -205,8 +205,8 @@ class DynamicTableController extends Controller
             'options' => 'nullable|array',
         ]);
 
-        // Validasi khusus untuk enum (kalau type-nya enum)
-        if ($column->type === 'enum') {
+        // Validasi khusus untuk select, radio, checkbox (kalau type-nya butuh options)
+        if (in_array($column->type, ['select', 'radio', 'checkbox'])) {
             $request->validate([
                 'options.values' => 'required|array|min:1',
                 'options.values.*' => 'required|string|max:255',

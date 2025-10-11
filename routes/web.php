@@ -17,6 +17,11 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+// Test Route for File Upload
+Route::get('/test-upload', function () {
+    return view('test-upload');
+})->name('test.upload');
+
 // Authentication Routes (Public)
 Route::get('/login', [LoginRegisterController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginRegisterController::class, 'login'])->name('login.post');

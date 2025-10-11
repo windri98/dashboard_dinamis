@@ -6,6 +6,7 @@ use App\Models\DynamicTable;
 use App\Models\User;
 use App\Models\Roles;
 use App\Models\Permission;
+use App\Services\FileUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -453,6 +454,28 @@ class DashboardController extends Controller
             $rules = $this->buildValidationRules($dynamicTable);
             $validated = $request->validate($rules);
 
+            // Handle file uploads
+            $fileUploadService = new FileUploadService();
+            $fileColumns = $dynamicTable->activeColumns->whereIn('type', ['file', 'image']);
+            
+            foreach ($fileColumns as $column) {
+                $columnName = $column->column_name;
+                if ($request->hasFile($columnName)) {
+                    try {
+                        $uploadedFile = $fileUploadService->uploadFile(
+                            $request->file($columnName),
+                            $dynamicTable->table_name,
+                            $columnName
+                        );
+                        $validated[$columnName] = basename($uploadedFile['path']);
+                        Log::info("File uploaded successfully for {$columnName}: " . $uploadedFile['path']);
+                    } catch (\Exception $e) {
+                        Log::error("File upload error for {$columnName}: " . $e->getMessage());
+                        return back()->with('error', "Gagal upload {$column->name}: " . $e->getMessage())->withInput();
+                    }
+                }
+            }
+
             $insertData = array_filter($validated, function($value) {
                 return $value !== null && $value !== '';
             });
@@ -496,6 +519,36 @@ class DashboardController extends Controller
             $rules = $this->buildValidationRules($dynamicTable);
             $validated = $request->validate($rules);
 
+            // Handle file uploads
+            $fileUploadService = new FileUploadService();
+            $fileColumns = $dynamicTable->activeColumns->whereIn('type', ['file', 'image']);
+            
+            foreach ($fileColumns as $column) {
+                $columnName = $column->column_name;
+                if ($request->hasFile($columnName)) {
+                    try {
+                        // Delete old file if exists
+                        $oldFile = $existingRecord->{$columnName} ?? null;
+                        if ($oldFile && !str_contains($oldFile, 'tmp')) {
+                            $oldFilePath = $column->type === 'image' ? 'uploads/images/' . $oldFile : 'uploads/files/' . $oldFile;
+                            $fileUploadService->deleteFile($oldFilePath);
+                        }
+                        
+                        // Upload new file
+                        $uploadedFile = $fileUploadService->uploadFile(
+                            $request->file($columnName),
+                            $dynamicTable->table_name,
+                            $columnName
+                        );
+                        $validated[$columnName] = basename($uploadedFile['path']);
+                        Log::info("File updated successfully for {$columnName}: " . $uploadedFile['path']);
+                    } catch (\Exception $e) {
+                        Log::error("File upload error for {$columnName}: " . $e->getMessage());
+                        return back()->with('error', "Gagal upload {$column->name}: " . $e->getMessage())->withInput();
+                    }
+                }
+            }
+
             $updateData = [];
             foreach ($validated as $key => $value) {
                 $column = $dynamicTable->activeColumns->where('column_name', $key)->first();
@@ -516,7 +569,7 @@ class DashboardController extends Controller
             if ($affected > 0) {
                 return back()->with('success', 'Data berhasil diperbarui');
             } else {
-                return back()->with('warning', 'Tidak ada perubahan yang disimpan');
+                return back()->with('info', 'Tidak ada perubahan data');
             }
             
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -593,6 +646,19 @@ class DashboardController extends Controller
                     break;
                 case 'boolean':
                     $columnRules[] = 'boolean';
+                    break;
+                case 'file':
+                    $columnRules[] = 'file|mimes:pdf,doc,docx,xls,xlsx,txt,zip,rar|max:10240'; // 10MB
+                    break;
+                case 'image':
+                    $columnRules[] = 'image|mimes:jpeg,jpg,png,gif,webp|max:5120'; // 5MB
+                    break;
+                case 'select':
+                case 'radio':
+                case 'checkbox':
+                    if (isset($column->options['values']) && is_array($column->options['values'])) {
+                        $columnRules[] = 'in:' . implode(',', $column->options['values']);
+                    }
                     break;
                 case 'enum':
                     if (isset($column->options['values']) && is_array($column->options['values'])) {

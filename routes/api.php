@@ -11,6 +11,9 @@ Route::get('/user', function (Request $request) {
 
 // Dynamic API Routes - Protected by ApiGuardMiddleware
 Route::middleware('api.guard')->group(function () {
+    // Table info endpoint (untuk mengetahui struktur table dan column types)
+    Route::get('/dynamic/{tableName}/info', [DynamicApiController::class, 'getTableInfo']);
+    
     // Dynamic CRUD API for any table
     Route::get('/dynamic/{tableName}', [DynamicApiController::class, 'index']);
     Route::get('/dynamic/{tableName}/{id}', [DynamicApiController::class, 'show']);
